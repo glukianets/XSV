@@ -1,6 +1,9 @@
 import Swift
 
 public protocol _SegmentProtocol: Hashable & LosslessStringConvertible {
+    associatedtype Strategy: SegmentationStrategy
+    associatedtype Element: _SegmentProtocol
+    
     init(memento: Memento)
     
     var value: Substring { get set }
@@ -23,7 +26,27 @@ public struct Memento {
     }
 }
 
-public typealias XSV = Segment<0x1C, XSVFile>
-public typealias XSVFile = Segment<0x1D, XSVGroup>
-public typealias XSVGroup = Segment<0x1E, XSVRecord>
-public typealias XSVRecord = Segment<0x1F, Unit>
+public struct XSVPackageStrategy: SegmentationStrategy {
+    public static let separator = ASCIISeparator.fs.rawValue
+}
+
+public struct XSVFileStrategy: SegmentationStrategy {
+    public static let separator = ASCIISeparator.gs.rawValue
+}
+
+public struct XSVGroupStrategy: SegmentationStrategy {
+    public static let separator = ASCIISeparator.rs.rawValue
+}
+
+public struct XSVRecordStrategy: SegmentationStrategy {
+    public static let separator = ASCIISeparator.us.rawValue
+}
+
+public struct XSVUnitStrategy: SegmentationStrategy {
+    public static let separator: UInt8 = 0
+}
+
+public typealias XSV = Segment<XSVPackageStrategy, XSVFile>
+public typealias XSVFile = Segment<XSVFileStrategy, XSVGroup>
+public typealias XSVGroup = Segment<XSVGroupStrategy, XSVRecord>
+public typealias XSVRecord = Segment<XSVRecordStrategy, Unit>

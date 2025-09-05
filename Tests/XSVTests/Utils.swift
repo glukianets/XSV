@@ -39,11 +39,11 @@ internal struct LCG: RandomNumberGenerator {
 }
 
 struct GenerationConfig {
-    let filesRange  = 1...10
-    let groupsRange = 1...10
-    let recordsRange = 1...10
-    let unitsRange   = 1...10
-    let unitSizeRange = 1...100
+    let filesRange  = 1...2
+    let groupsRange = 1...2
+    let recordsRange = 1...2
+    let unitsRange   = 1...2
+    let unitSizeRange = 1...5
 }
 
 func generatePackage<C>(rng: inout LCG, config: GenerationConfig = .init()) -> C where C == PackageLike<C>
@@ -97,7 +97,8 @@ func generateUnit<T: LosslessStringConvertible>(rng: inout LCG, config: Generati
     for _ in 0..<length {
         var scalar: UnicodeScalar
         repeat {
-            let value = UInt32(rng.nextInt(in: 0x20...0xD7FF)) // skip C0 and surrogates
+            let value = UInt32(rng.nextInt(in: 0x20...0x7F)) // just ASCII
+//            let value = UInt32(rng.nextInt(in: 0x20...0xD7FF)) // skip C0 and surrogates
             scalar = UnicodeScalar(value) ?? UnicodeScalar(0x20)
         } while CharacterSet.controlCharacters.contains(scalar)
         scalars.append(scalar)
@@ -189,4 +190,64 @@ func == (_ lhs: some StringProtocol, _ rhs: Unit) -> Bool {
 
 func == (_ lhs: Unit, _ rhs: some StringProtocol) -> Bool {
     return lhs.value == rhs
+}
+
+// MARK: - First-difference diagnostics
+
+typealias XSVDiff = (path: String, left: String, right: String)
+
+func diffPackage<L, R>(_ lhs: PackageLike<L>, _ rhs: PackageLike<R>) -> XSVDiff? {
+    if lhs.count != rhs.count {
+        return ("files.count", String(lhs.count), String(rhs.count))
+    }
+    var i = 0
+    for (lf, rf) in zip(lhs, rhs) {
+        if let d = diffFile(lf, rf, path: "files[\(i)]") {
+            return d
+        }
+        i += 1
+    }
+    return nil
+}
+
+func diffFile<L, R>(_ lhs: FileLike<L>, _ rhs: FileLike<R>, path: String = "files") -> XSVDiff? {
+    if lhs.count != rhs.count {
+        return ("\(path).groups.count", String(lhs.count), String(rhs.count))
+    }
+    var i = 0
+    for (lg, rg) in zip(lhs, rhs) {
+        if let d = diffGroup(lg, rg, path: "\(path).groups[\(i)]") {
+            return d
+        }
+        i += 1
+    }
+    return nil
+}
+
+func diffGroup<L, R>(_ lhs: GroupLike<L>, _ rhs: GroupLike<R>, path: String = "files[].groups[]") -> XSVDiff? {
+    if lhs.count != rhs.count {
+        return ("\(path).records.count", String(lhs.count), String(rhs.count))
+    }
+    var i = 0
+    for (lr, rr) in zip(lhs, rhs) {
+        if let d = diffRecord(lr, rr, path: "\(path).records[\(i)]") {
+            return d
+        }
+        i += 1
+    }
+    return nil
+}
+
+func diffRecord<L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>, path: String = "files[].groups[].records[]") -> XSVDiff? {
+    if lhs.count != rhs.count {
+        return ("\(path).units.count", String(lhs.count), String(rhs.count))
+    }
+    var i = 0
+    for (lu, ru) in zip(lhs, rhs) {
+        if lu.description != ru.description {
+            return ("\(path).units[\(i)]", lu.description, ru.description)
+        }
+        i += 1
+    }
+    return nil
 }

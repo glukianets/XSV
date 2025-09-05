@@ -1,5 +1,14 @@
 import Foundation
 
+infix operator ??=: NilCoalescingPrecedence
+
+@discardableResult
+internal func ??=<T>(_ lhs: inout T?, _ rhs: @autoclosure () -> T?) -> T? {
+    guard lhs == nil else { return lhs }
+    defer { lhs = rhs() }
+    return lhs
+}
+
 internal enum ASCIISeparator: UInt8, Hashable & Comparable & CaseIterable {
     case fs = 0x1C // 28 - File Separator
     case gs = 0x1D // 29 - Group Separator
@@ -15,6 +24,10 @@ internal enum ASCIISeparator: UInt8, Hashable & Comparable & CaseIterable {
     internal init?(_ numeric: some BinaryInteger) {
         self.init(rawValue: numericCast(numeric))
     }
+}
+
+public protocol SegmentationStrategy {
+    static var separator: UInt8 { get }
 }
 
 extension Range where Bound: Strideable, Bound.Stride == Bound {

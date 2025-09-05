@@ -1,15 +1,15 @@
 import Foundation
 
-public struct Segment<let Separator: Int, Element: _SegmentProtocol>: _SegmentProtocol {
+public struct Segment<Strategy: SegmentationStrategy, Element: _SegmentProtocol>: _SegmentProtocol {
     fileprivate enum Value: Hashable {
         case materialized(Element)
         case thunk(data: Substring, RangeData)
     }
     
     private static var separatorString: String {
-        String(Character(UnicodeScalar(Separator)!))
+        String(Character(UnicodeScalar(Strategy.separator)))
     }
-
+    
     public var value: Substring {
         get {
             self.elements.map {
@@ -29,7 +29,6 @@ public struct Segment<let Separator: Int, Element: _SegmentProtocol>: _SegmentPr
     private var elements: [Value]
     
     fileprivate init(_ elements: some Sequence<Value>) {
-        precondition(ASCIISeparator(Separator) != nil, "Segment Separator has to belong to ASCII IS range")
         self.elements = Array(elements)
     }
     

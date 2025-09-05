@@ -24,46 +24,40 @@ internal struct RangeData: Hashable {
         self.ranges = ranges
     }
 
+//    internal static func splitRanges(in string: Substring, separators: ClosedRange<ASCIISeparator>) -> RangeData {
+//        typealias Seg = Segmentator<XSVPackageStrategy, Segmentator<XSVFileStrategy, Segmentator<XSVGroupStrategy, Segmentator<XSVRecordStrategy, Segmentator<XSVUnitStrategy, StringFeeder>>>>>
+//        
+//        let segmentator: Seg = .init(.init(.init(.init(.init(.ready(string))))))
+//        return splitRanges(segmentator)
+//    }
+    
     internal static func splitRanges(in string: Substring, separators: ClosedRange<ASCIISeparator>) -> RangeData {
-        typealias Files = RangeData
-        typealias Groups = RangeData
-        typealias Records = RangeData
-        typealias Units = RangeData
-
-        var currentFiles: Files = .init()
-        var currentGroups: Groups = .init()
-        var currentRecords: Records = .init()
-        var currentUnits: Units = .init()
-            
-        var spliterator = Segmentator(string)
-
-        while let token = spliterator.next() {
-            switch token {
-            case .file(let range):
-                guard separators.contains(.fs) else { continue }
-                assert(currentUnits.isEmpty)
-                assert(currentRecords.ranges.isEmpty)
-                currentFiles.ranges.append(Files.Element(range: range, value: currentGroups))
-                currentGroups = .init()
-            case .group(let range):
-                guard separators.contains(.gs) else { continue }
-                assert(currentUnits.isEmpty)
-                currentGroups.ranges.append(Groups.Element(range: range, value: currentRecords))
-                currentRecords = .init()
-            case .record(let range):
-                guard separators.contains(.rs) else { continue }
-                currentRecords.ranges.append(Records.Element(range: range, value: currentUnits))
-                currentUnits = .init()
-            case .unit(let range):
-                guard separators.contains(.us) else { continue }
-                currentUnits.ranges.append(Units.Element(range: range, value: .init()))
-            }
-        }
+        let segmentator: Segmentator = .init(string, strategies: [
+            XSVUnitStrategy.self,
+            XSVRecordStrategy.self,
+            XSVGroupStrategy.self,
+            XSVFileStrategy.self,
+            XSVPackageStrategy.self,
+        ])
         
-        assert(currentUnits.ranges.isEmpty)
-        assert(currentRecords.ranges.isEmpty)
-        assert(currentGroups.ranges.isEmpty)
+        return splitRanges(segmentator)
+    }
 
-        return currentFiles
+    internal static func splitRanges<S: IteratorProtocol>(_ segmentator: S) -> RangeData where S.Element == (level: Int, range: Range<String.Index>) {
+        var segmentator = segmentator
+
+        var levels: [RangeData] = []
+
+        while let (level, range) = segmentator.next() {
+            if levels.count <= level {
+                levels.append(contentsOf: repeatElement(.init(), count: level + 1 - levels.count))
+            }
+            let child = level == 0 ? .init() : levels[level - 1]
+            levels[level].ranges.append(Element(range: range, value: child))
+            levels[0..<level] = .init(repeating: .init(), count: level)
+        }
+
+        return levels.last { !$0.isEmpty } ?? .init()
     }
 }
+

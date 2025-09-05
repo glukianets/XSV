@@ -1,6 +1,9 @@
 import Foundation
 
 public struct Unit: _SegmentProtocol {
+    public typealias Strategy = XSVUnitStrategy
+    public typealias Element = Self
+    
     public var value: Substring
     
     public init(memento: Memento) {
