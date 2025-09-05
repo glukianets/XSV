@@ -9,27 +9,6 @@ internal func ??=<T>(_ lhs: inout T?, _ rhs: @autoclosure () -> T?) -> T? {
     return lhs
 }
 
-internal enum ASCIISeparator: UInt8, Hashable & Comparable & CaseIterable {
-    case fs = 0x1C // 28 - File Separator
-    case gs = 0x1D // 29 - Group Separator
-    case rs = 0x1E // 30 - Record Separator
-    case us = 0x1F // 31 - Unit (Field) Separator
-    
-    public static var allCases: ClosedRange<ASCIISeparator> { .fs ... .us }
-    
-    public static func < (lhs: ASCIISeparator, rhs: ASCIISeparator) -> Bool {
-        lhs.rawValue < rhs.rawValue
-    }
-    
-    internal init?(_ numeric: some BinaryInteger) {
-        self.init(rawValue: numericCast(numeric))
-    }
-}
-
-public protocol SegmentationStrategy {
-    static var separator: UInt8 { get }
-}
-
 extension Range where Bound: Strideable, Bound.Stride == Bound {
     internal func rebased(relativeTo parent: Range<Bound>) -> Range<Bound> {
         let clamped = self.clamped(to: parent)

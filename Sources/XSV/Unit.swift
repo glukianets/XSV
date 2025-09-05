@@ -1,12 +1,11 @@
 import Foundation
 
-public struct Unit: _SegmentProtocol {
+public struct Unit: UnitProtocol {
     public typealias Strategy = XSVUnitStrategy
-    public typealias Element = Self
     
     public var value: Substring
     
-    public init(memento: Memento) {
+    public init(memento: Memento<Self>) {
         self.value = memento.value
     }
     
@@ -17,9 +16,12 @@ public struct Unit: _SegmentProtocol {
 }
 
 extension Unit {
+    public static func memento(_ string: some StringProtocol) -> Memento<Self> {
+        return .init(_value: Substring(string), _ranges: .init())
+    }
+    
     public init(_ string: some StringProtocol) {
-        let string = String(string)[...]
-        self.init(memento: .init(_value: string, _ranges: .init()))
+        self.init(memento: Self.memento(string))
     }
 }
 

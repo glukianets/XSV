@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Segment<Strategy: SegmentationStrategy, Element: _SegmentProtocol>: _SegmentProtocol {
+public struct Segment<Strategy: SegmentationStrategy, Element: UnitProtocol>: SegmentProtocol {
     fileprivate enum Value: Hashable {
         case materialized(Element)
         case thunk(data: Substring, RangeData)
@@ -32,16 +32,20 @@ public struct Segment<Strategy: SegmentationStrategy, Element: _SegmentProtocol>
         self.elements = Array(elements)
     }
     
-    public init(memento: Memento) {
+    public init(memento: Memento<Self>) {
         self.init(memento.value.isEmpty ? [] : memento.ranges.ranges.map { .thunk(data: memento.value[$0.range], $0.value) })
     }
 }
 
 extension Segment {
-    public init(_ string: some StringProtocol) {
+    public static func memento(_ string: some StringProtocol) -> Memento<Self> {
         let string = String(string)[...]
-        let ranges = RangeData(in: string, separators: ASCIISeparator.allCases)
-        self.init(memento: .init(_value: string, _ranges: ranges))
+        let ranges = RangeData(segmentator: Self.segmentator(string))
+        return .init(_value: string, _ranges: ranges)
+    }
+    
+    public init(_ string: some StringProtocol) {
+        self.init(memento: Self.memento(string))
     }
 }
 

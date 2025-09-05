@@ -1,45 +1,19 @@
 import Swift
 
-public protocol _SegmentProtocol: Hashable & LosslessStringConvertible {
-    associatedtype Strategy: SegmentationStrategy
-    associatedtype Element: _SegmentProtocol
-    
-    init(memento: Memento)
-    
-    var value: Substring { get set }
-}
-
-extension _SegmentProtocol {
-    public var description: String {
-        get { String(self.value) }
-        set { self.value = newValue[...] }
-    }
-}
-
-public struct Memento {
-    internal var value: Substring
-    internal var ranges: RangeData
-    
-    internal init(_value: Substring, _ranges: RangeData) {
-        self.value = _value
-        self.ranges = _ranges
-    }
-}
-
 public struct XSVPackageStrategy: SegmentationStrategy {
-    public static let separator = ASCIISeparator.fs.rawValue
+    public static let separator: UTF8.CodeUnit = 0x1C // 28 - File Separator
 }
 
 public struct XSVFileStrategy: SegmentationStrategy {
-    public static let separator = ASCIISeparator.gs.rawValue
+    public static let separator: UTF8.CodeUnit  = 0x1D // 29 - Group Separator
 }
 
 public struct XSVGroupStrategy: SegmentationStrategy {
-    public static let separator = ASCIISeparator.rs.rawValue
+    public static let separator: UTF8.CodeUnit  = 0x1E // 30 - Record Separator
 }
 
 public struct XSVRecordStrategy: SegmentationStrategy {
-    public static let separator = ASCIISeparator.us.rawValue
+    public static let separator: UTF8.CodeUnit  = 0x1F // 31 - Unit (Field) Separator
 }
 
 public struct XSVUnitStrategy: SegmentationStrategy {
