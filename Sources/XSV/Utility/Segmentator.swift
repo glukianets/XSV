@@ -7,12 +7,12 @@ internal struct Segmentator: IteratorProtocol {
     public typealias Element = SegmentationEvent
 
     private var string: Substring.UTF8View
-    private var strategies: [any SegmentationStrategy.Type]
+    private var strategies: [any SegmentationStrategy]
     private var rangeStarts: [Index]
     private var outputBuffer: [Element]
     private var index: Index
 
-    public init(_ string: borrowing Substring, strategies: some Sequence<any SegmentationStrategy.Type>) {
+    public init(_ string: borrowing Substring, strategies: some Sequence<any SegmentationStrategy>) {
         self.string = string.utf8
         self.strategies = Array(strategies)
         self.index = self.string.startIndex
@@ -22,17 +22,24 @@ internal struct Segmentator: IteratorProtocol {
     }
         
     public mutating func next() -> Element? {
-        outer: repeat {
+    el: repeat {
             if let element = self.outputBuffer.popLast(){ return element }
 
             while self.index < self.string.endIndex {
-                let char = self.string[self.index]
+                let byte = self.string[self.index]
+
                 defer { self.string.formIndex(after: &self.index) }
-                guard let cut = self.strategies.firstIndex(where: { char == $0.separator }) else { continue }
-                self.close(at: cut + 1)
-                continue outer
+
+                for i in self.strategies.indices {
+                    let action = self.strategies[i].step(byte: byte)
+                    
+                    if case .cut = action {
+                        self.close(at: i + 1)
+                        continue el
+                    }
+                }
             }
-            
+
             self.close(at: self.strategies.count)
             self.strategies = []
         } while self.index < self.string.endIndex || !self.outputBuffer.isEmpty
@@ -46,6 +53,8 @@ internal struct Segmentator: IteratorProtocol {
         for i in (0..<level).reversed() {
             self.outputBuffer.append(SegmentationEvent(level: i, range: rangeStarts[i]..<self.index))
             rangeStarts[i] = nextIndex
+            self.strategies[i].resetForNewSegment()
         }
     }
 }
+

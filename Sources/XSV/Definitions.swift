@@ -1,9 +1,22 @@
 import Swift
 
+// MARK: - SegmentationAction
+
+public enum SegmentationAction {
+    case none
+    case cut
+}
+
 // MARK: - SegmentationStrategy
 
 public protocol SegmentationStrategy {
+    // Keep static separator for formatting/joining in Segment
     static var separator: UTF8.CodeUnit { get }
+
+    // Instance-based, stateful strategy API
+    init()
+    mutating func step(byte: UInt8) -> SegmentationAction
+    mutating func resetForNewSegment()
 }
 
 // MARK: - SegmentProtocol
@@ -35,14 +48,20 @@ extension UnitProtocol {
 extension UnitProtocol {
     private static var strategyType: SegmentationStrategy.Type { Strategy.self }
 
-    private static  var strategies: some Sequence<SegmentationStrategy.Type> {
-        sequence(first: Self.self as any UnitProtocol.Type) { current in
-            (current as? any SegmentProtocol.Type)?.subSegmentType
-        }.map { $0.strategyType }
+    // Build the strategy chain from innermost (Self) up the hierarchy by following Element types,
+    // then reverse to have strategies ordered from inner to outer for the Segmentator.
+    private static var strategyTypes: [SegmentationStrategy.Type] {
+        Array(
+            sequence(first: Self.self as any UnitProtocol.Type) { current in
+                (current as? any SegmentProtocol.Type)?.subSegmentType
+            }.map { $0.strategyType }
+        )
     }
-    
+
     internal static func segmentator(_ string: Substring) -> Segmentator {
-        Segmentator(string, strategies: strategies.reversed())
+        // Instantiate strategies and reverse to match previous Segmentator expectation (outermost last).
+        let instances: [any SegmentationStrategy] = Self.strategyTypes.reversed().map { $0.init() }
+        return Segmentator(string, strategies: instances)
     }
 }
 
@@ -57,3 +76,4 @@ public struct Memento<T: UnitProtocol> {
         self.ranges = _ranges
     }
 }
+
