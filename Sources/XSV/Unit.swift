@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Unit<Strategy: SegmentationStrategy>: UnitProtocol {
+public struct Unit<Strategy: UnitStrategy>: UnitProtocol {
     public typealias Strategy = Strategy
     
     public var value: Substring

@@ -1,13 +1,15 @@
 import Foundation
 
-infix operator ??=: NilCoalescingPrecedence
+infix operator ??=: AssignmentPrecedence
 
 @discardableResult
+@inline(__always)
 internal func ??=<T>(_ lhs: inout T?, _ rhs: @autoclosure () -> T?) -> T? {
     guard lhs == nil else { return lhs }
     defer { lhs = rhs() }
     return lhs
 }
+
 
 extension Range where Bound: Strideable, Bound.Stride == Bound {
     internal func rebased(relativeTo parent: Range<Bound>) -> Range<Bound> {

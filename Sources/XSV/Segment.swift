@@ -1,30 +1,33 @@
 import Foundation
 
-public struct Segment<Strategy: SegmentationStrategy, Element: UnitProtocol>: SegmentProtocol {
-    fileprivate enum Value: Hashable {
-        case materialized(Element)
+public struct Segment<Strategy: UnitStrategy>: UnitProtocol {
+    public typealias Strategy = Strategy
+    public typealias Element = Strategy.Value
+
+    fileprivate enum Storage: Hashable {
+        case materialized(Strategy.Value)
         case thunk(data: Substring, RangeData)
     }
     
     public var value: Substring {
         get {
-            self.elements.map {
-                switch $0 {
+            Strategy.merge(self.elements.map { e -> Substring in
+                switch e {
                 case .materialized(let segment):
                     segment.value
                 case .thunk(data: let substring, _):
                     substring
                 }
-            }.joined(separator: Strategy.separator)[...]
+            })
         }
         set {
             self = .init(newValue)
         }
     }
 
-    private var elements: [Value]
+    private var elements: [Storage]
     
-    fileprivate init(_ elements: some Sequence<Value>) {
+    fileprivate init(_ elements: some Sequence<Storage>) {
         self.elements = Array(elements)
     }
     
@@ -35,10 +38,12 @@ public struct Segment<Strategy: SegmentationStrategy, Element: UnitProtocol>: Se
     }
 }
 
+extension Segment: SegmentProtocol where Self.Strategy: SegmentationStrategy { }
+
 extension Segment {
     public static func memento(_ string: some StringProtocol) -> Memento<Self> {
-        let string = String(string)[...]
-        let ranges = RangeData(segmentator: Self.segmentator(string))
+        let string = Substring(string)
+        let ranges = RangeData(segmentator: Self.Strategy.segmentator(string))
         return .init(_value: string, _ranges: ranges)
     }
     
@@ -47,9 +52,8 @@ extension Segment {
     }
 }
 
-extension Segment: RangeReplaceableCollection, RandomAccessCollection, MutableCollection {
+extension Segment: Sequence & Collection & BidirectionalCollection & RangeReplaceableCollection & RandomAccessCollection & MutableCollection where Self: SegmentProtocol {
     public typealias SubSequence = Slice<Self>
-    public typealias Element = Element
     public typealias Index = Int
 
     public var startIndex: Int { elements.startIndex }
@@ -87,7 +91,7 @@ extension Segment: RangeReplaceableCollection, RandomAccessCollection, MutableCo
     }
 }
 
-extension Segment: ExpressibleByArrayLiteral {
+extension Segment: ExpressibleByArrayLiteral where Self: SegmentProtocol {
     public typealias ArrayLiteralElement = Element
     
     public init(arrayLiteral elements: Element...) {

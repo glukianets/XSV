@@ -7,12 +7,12 @@ internal struct Segmentator: IteratorProtocol {
     public typealias Element = SegmentationEvent
 
     private var string: Substring
-    private var strategies: [any SegmentationStrategy]
+    private var strategies: [any UnitStrategy]
     private var rangeStarts: [Index]
     private var outputBuffer: [Element]
     private var index: Index
 
-    public init(_ string: borrowing Substring, strategies: some Sequence<any SegmentationStrategy>) {
+    public init(_ string: borrowing Substring, strategies: some Sequence<any UnitStrategy>) {
         self.string = string[...]
         self.strategies = Array(strategies)
         self.index = self.string.startIndex
@@ -33,9 +33,9 @@ internal struct Segmentator: IteratorProtocol {
                     
                     switch action {
                     case .cut(before: let nextIndex):
-                        assert(self.index..<self.string.endIndex ~= nextIndex)
+                        assert(self.index...self.string.endIndex ~= nextIndex)
                         self.close(at: i + 1, continueAt: nextIndex)
-                        self.index = nextIndex
+                        self.index = string.index(before: nextIndex)
                         continue el
                     case .consume(through: let nextIndex):
                         self.index = nextIndex

@@ -7,19 +7,40 @@ public enum SegmentationAction {
     case consume(through: String.Index)
 }
 
-// MARK: - SegmentationStrategy
+// MARK: - UnitStrategy
 
-public protocol SegmentationStrategy {
-    static var separator: String { get }
-
+public protocol UnitStrategy {
+    associatedtype Value: ValueProtocol
+    
     init()
     mutating func step(_ string: borrowing Substring) -> SegmentationAction?
     mutating func resetForNewSegment()
+    
+    static func merge(_ elements: some Sequence<Substring>) -> Substring
+}
+
+extension UnitStrategy {
+    private static var strategyTypes: some Sequence<any UnitStrategy.Type> {
+        func next(of type: (some SegmentationStrategy).Type) -> any UnitStrategy.Type { type.Next.self }
+        return sequence(first: Self.self) { ($0 as? any SegmentationStrategy.Type).map { next(of: $0) } }
+    }
+    
+    internal static func segmentator(_ string: Substring) -> Segmentator {
+        Segmentator(string, strategies: Self.strategyTypes.reversed().map { $0.init() })
+    }
+}
+
+// MARK: - SegmentationStrategy
+
+public protocol SegmentationStrategy: UnitStrategy {
+    associatedtype Value: UnitProtocol = Segment<Next> where Value.Strategy == Next
+    
+    associatedtype Next: UnitStrategy
 }
 
 // MARK: - SegmentProtocol
 
-public protocol SegmentProtocol: UnitProtocol {
+public protocol SegmentProtocol: UnitProtocol & ExpressibleByArrayLiteral {
     associatedtype Element: UnitProtocol
 }
 
@@ -29,11 +50,10 @@ extension SegmentProtocol {
 
 // MARK: - UnitProtocol
 
-public protocol UnitProtocol: Hashable & LosslessStringConvertible {
-    associatedtype Strategy: SegmentationStrategy
+public protocol UnitProtocol: ValueProtocol {
+    associatedtype Strategy: UnitStrategy
 
     init(memento: Memento<Self>)
-    var value: Substring { get set }
 }
 
 extension UnitProtocol {
@@ -43,19 +63,37 @@ extension UnitProtocol {
     }
 }
 
-extension UnitProtocol {
-    private static var strategyType: SegmentationStrategy.Type { Strategy.self }
+// MARK: - Value
 
-    private static var strategyTypes: some Sequence<SegmentationStrategy.Type> {
-        sequence(first: Self.self as any UnitProtocol.Type) { current in
-            (current as? any SegmentProtocol.Type)?.subSegmentType
-        }.map { $0.strategyType }
-    }
+public protocol ValueProtocol: Hashable & LosslessStringConvertible {
+    var value: Substring { get set }
+}
 
-    internal static func segmentator(_ string: Substring) -> Segmentator {
-        let instances: [any SegmentationStrategy] = Self.strategyTypes.reversed().map { $0.init() }
-        return Segmentator(string, strategies: instances)
+extension ValueProtocol where Self: StringProtocol {
+    public var value: Substring {
+        get { Substring(self) }
+        set { self = Self.init(String(newValue)) ?? self }
     }
+}
+
+extension Substring: ValueProtocol {
+    public var value: Substring {
+        get { self }
+        set { self = newValue }
+    }
+}
+
+extension Never: @retroactive LosslessStringConvertible {}
+extension Never: @retroactive CustomStringConvertible {}
+extension Never: ValueProtocol {
+    public var value: Substring {
+        get { fatalError() }
+        set { fatalError() }
+    }
+    
+    public init?(_ description: String) { nil }
+    
+    public var description: String { fatalError() }
 }
 
 // MARK: - Memento
