@@ -10,8 +10,10 @@ public struct XSVPackageStrategy: SegmentationStrategy {
     
     public init() { }
     
-    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
-        return segment.hasPrefix(Self.separator) ? .cut : .none
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction? {
+        return segment.range(of: Self.separator, options: .anchored)
+            .map(\.upperBound)
+            .map(SegmentationAction.cut(before:))
     }
     
     public mutating func resetForNewSegment() { }
@@ -22,8 +24,10 @@ public struct XSVFileStrategy: SegmentationStrategy {
     
     public init() { }
     
-    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
-        return segment.hasPrefix(Self.separator) ? .cut : .none
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction? {
+        return segment.range(of: Self.separator, options: .anchored)
+            .map(\.upperBound)
+            .map(SegmentationAction.cut(before:))
     }
     
     public mutating func resetForNewSegment() { }
@@ -34,8 +38,10 @@ public struct XSVGroupStrategy: SegmentationStrategy {
     
     public init() { }
     
-    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
-        return segment.hasPrefix(Self.separator) ? .cut : .none
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction? {
+        return segment.range(of: Self.separator, options: .anchored)
+            .map(\.upperBound)
+            .map(SegmentationAction.cut(before:))
     }
     
     public mutating func resetForNewSegment() { }
@@ -46,8 +52,10 @@ public struct XSVRecordStrategy: SegmentationStrategy {
     
     public init() { }
 
-    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
-        return segment.hasPrefix(Self.separator) ? .cut : .none
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction? {
+        return segment.range(of: Self.separator, options: .anchored)
+            .map(\.upperBound)
+            .map(SegmentationAction.cut(before:))
     }
 
     public mutating func resetForNewSegment() { }
@@ -58,7 +66,7 @@ public struct XSVUnitStrategy: SegmentationStrategy {
     
     public init() { }
 
-    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction? {
         return .none
     }
 

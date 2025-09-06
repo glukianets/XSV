@@ -23,24 +23,28 @@ internal struct Segmentator: IteratorProtocol {
         
     public mutating func next() -> Element? {
     el: repeat {
-            if let element = self.outputBuffer.popLast(){ return element }
+            if let element = self.outputBuffer.popLast() { return element }
 
-            while self.index < self.string.endIndex {
-                let nextIndex = self.string.index(after: self.index)
-                
-                defer { self.index = nextIndex }
+        ch: while self.index < self.string.endIndex {
+                defer { self.string.formIndex(after: &self.index) }
 
                 for i in self.strategies.indices {
-                    let action = self.strategies[i].step(self.string[self.index..<nextIndex])
+                    guard let action = self.strategies[i].step(self.string[self.index...]) else { continue }
                     
-                    if case .cut = action {
-                        self.close(at: i + 1)
+                    switch action {
+                    case .cut(before: let nextIndex):
+                        assert(self.index..<self.string.endIndex ~= nextIndex)
+                        self.close(at: i + 1, continueAt: nextIndex)
+                        self.index = nextIndex
                         continue el
+                    case .consume(through: let nextIndex):
+                        self.index = nextIndex
+                        continue ch
                     }
                 }
             }
 
-            self.close(at: self.strategies.count)
+            self.close(at: self.strategies.count, continueAt: self.string.endIndex)
             self.strategies = []
         } while self.index < self.string.endIndex || !self.outputBuffer.isEmpty
         
@@ -48,9 +52,7 @@ internal struct Segmentator: IteratorProtocol {
     }
     
     @inline(__always)
-    private mutating func close(at level: Int) {
-        let nextIndex = self.string.index(self.index, offsetBy: 1, limitedBy: self.string.endIndex) ?? self.string.endIndex
-          //min(self.string.endIndex, self.string.index(after: self.index))
+    private mutating func close(at level: Int, continueAt nextIndex: Index) {
         for i in (0..<level).reversed() {
             self.outputBuffer.append(SegmentationEvent(level: i, range: rangeStarts[i]..<self.index))
             rangeStarts[i] = nextIndex
