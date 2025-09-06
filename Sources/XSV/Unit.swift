@@ -1,7 +1,7 @@
 import Foundation
 
-public struct Unit: UnitProtocol {
-    public typealias Strategy = XSVUnitStrategy
+public struct Unit<Strategy: SegmentationStrategy>: UnitProtocol {
+    public typealias Strategy = Strategy
     
     public var value: Substring
     

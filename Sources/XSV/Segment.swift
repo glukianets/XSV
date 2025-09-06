@@ -29,7 +29,9 @@ public struct Segment<Strategy: SegmentationStrategy, Element: UnitProtocol>: Se
     }
     
     public init(memento: Memento<Self>) {
-        self.init(memento.value.isEmpty ? [] : memento.ranges.ranges.map { .thunk(data: memento.value[$0.range], $0.value) })
+        self.init(
+            memento.value.isEmpty ? [] : memento.ranges.ranges.map { .thunk(data: memento.value[$0.range], $0.value) }
+        )
     }
 }
 

@@ -3,7 +3,8 @@ import Swift
 public typealias XSV = Segment<XSVPackageStrategy, XSVFile>
 public typealias XSVFile = Segment<XSVFileStrategy, XSVGroup>
 public typealias XSVGroup = Segment<XSVGroupStrategy, XSVRecord>
-public typealias XSVRecord = Segment<XSVRecordStrategy, Unit>
+public typealias XSVRecord = Segment<XSVRecordStrategy, XSVUnit>
+public typealias XSVUnit = Unit<XSVUnitStrategy>
 
 public struct XSVPackageStrategy: SegmentationStrategy {
     public static let separator = "\u{1C}"// 28 - File Separator
