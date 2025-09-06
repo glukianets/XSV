@@ -6,10 +6,6 @@ public struct Segment<Strategy: SegmentationStrategy, Element: UnitProtocol>: Se
         case thunk(data: Substring, RangeData)
     }
     
-    private static var separatorString: String {
-        String(Character(UnicodeScalar(Strategy.separator)))
-    }
-    
     public var value: Substring {
         get {
             self.elements.map {
@@ -19,7 +15,7 @@ public struct Segment<Strategy: SegmentationStrategy, Element: UnitProtocol>: Se
                 case .thunk(data: let substring, _):
                     substring
                 }
-            }.joined(separator: Self.separatorString)[...]
+            }.joined(separator: Strategy.separator)[...]
         }
         set {
             self = .init(newValue)

@@ -10,12 +10,10 @@ public enum SegmentationAction {
 // MARK: - SegmentationStrategy
 
 public protocol SegmentationStrategy {
-    // Keep static separator for formatting/joining in Segment
-    static var separator: UTF8.CodeUnit { get }
+    static var separator: String { get }
 
-    // Instance-based, stateful strategy API
     init()
-    mutating func step(byte: UInt8) -> SegmentationAction
+    mutating func step(_ string: borrowing Substring) -> SegmentationAction
     mutating func resetForNewSegment()
 }
 

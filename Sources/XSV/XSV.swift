@@ -6,59 +6,59 @@ public typealias XSVGroup = Segment<XSVGroupStrategy, XSVRecord>
 public typealias XSVRecord = Segment<XSVRecordStrategy, Unit>
 
 public struct XSVPackageStrategy: SegmentationStrategy {
-    public static let separator: UTF8.CodeUnit = 0x1C // 28 - File Separator
+    public static let separator = "\u{1C}"// 28 - File Separator
     
     public init() { }
     
-    public mutating func step(byte: UInt8) -> SegmentationAction {
-        return byte == Self.separator ? .cut : .none
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
+        return segment.hasPrefix(Self.separator) ? .cut : .none
     }
     
     public mutating func resetForNewSegment() { }
 }
 
 public struct XSVFileStrategy: SegmentationStrategy {
-    public static let separator: UTF8.CodeUnit  = 0x1D // 29 - Group Separator
-
+    public static let separator = "\u{1D}" // 29 - Group Separator
+    
     public init() { }
     
-    public mutating func step(byte: UInt8) -> SegmentationAction {
-        return byte == Self.separator ? .cut : .none
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
+        return segment.hasPrefix(Self.separator) ? .cut : .none
     }
     
     public mutating func resetForNewSegment() { }
 }
 
 public struct XSVGroupStrategy: SegmentationStrategy {
-    public static let separator: UTF8.CodeUnit  = 0x1E // 30 - Record Separator
-
+    public static let separator = "\u{1E}" // 30 - Record Separator
+    
     public init() { }
     
-    public mutating func step(byte: UInt8) -> SegmentationAction {
-        return byte == Self.separator ? .cut : .none
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
+        return segment.hasPrefix(Self.separator) ? .cut : .none
     }
     
     public mutating func resetForNewSegment() { }
 }
 
 public struct XSVRecordStrategy: SegmentationStrategy {
-    public static let separator: UTF8.CodeUnit  = 0x1F // 31 - Unit (Field) Separator
-
+    public static let separator = "\u{1F}" // 31 - Unit (Field) Separator
+    
     public init() { }
 
-    public mutating func step(byte: UInt8) -> SegmentationAction {
-        return byte == Self.separator ? .cut : .none
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
+        return segment.hasPrefix(Self.separator) ? .cut : .none
     }
 
     public mutating func resetForNewSegment() { }
 }
 
 public struct XSVUnitStrategy: SegmentationStrategy {
-    public static let separator: UInt8 = 0
-
+    public static let separator = "\u{0}"
+    
     public init() { }
 
-    public mutating func step(byte: UInt8) -> SegmentationAction {
+    public mutating func step(_ segment: borrowing Substring) -> SegmentationAction {
         return .none
     }
 
