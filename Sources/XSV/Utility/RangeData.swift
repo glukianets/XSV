@@ -1,4 +1,4 @@
-import Foundation
+import Swift
 
 internal struct RangeData: Hashable {
     internal struct Element: Hashable{

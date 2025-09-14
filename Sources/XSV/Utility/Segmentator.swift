@@ -1,4 +1,4 @@
-import Foundation
+import Swift
 
 internal typealias SegmentationEvent = (level: Int, range: Range<String.Index>)
 

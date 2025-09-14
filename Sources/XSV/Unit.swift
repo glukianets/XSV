@@ -1,23 +1,30 @@
-import Foundation
+import Swift
 
 public struct Unit<Strategy: UnitStrategy>: UnitProtocol {
     public typealias Strategy = Strategy
     
-    public var value: Substring
+    private static func memento(_ string: some StringProtocol) -> Memento<Strategy> {
+        return .init(_value: Substring(string), _ranges: .init())
+    }
     
-    public init(memento: Memento<Self>) {
-        self.value = memento.value
+    public var rawValue: Substring
+    
+    public var description: String {
+        get { String(Self.Strategy.unescape(self.rawValue)) }
+        set { self.rawValue = Self.Strategy.escape(newValue[...]) }
+    }
+
+    public init(memento: Memento<Strategy>) {
+        self.rawValue = memento.value
     }
     
     public subscript<T: LosslessStringConvertible>(_ type: T.Type = T.self) -> T? {
         get { T.init(self.description) }
         set { self.description = newValue?.description ?? "" }
     }
-}
-
-extension Unit {
-    public static func memento(_ string: some StringProtocol) -> Memento<Self> {
-        return .init(_value: Substring(string), _ranges: .init())
+    
+    public init(rawValue: Substring) {
+        self.init(rawValue)
     }
     
     public init(_ string: some StringProtocol) {

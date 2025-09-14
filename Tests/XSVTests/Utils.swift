@@ -185,11 +185,11 @@ func == <L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>) -> Bool {
 }
 
 func == (_ lhs: some StringProtocol, _ rhs: Unit<some SegmentationStrategy>) -> Bool {
-    return lhs == rhs.value
+    return lhs == rhs.rawValue
 }
 
 func == (_ lhs: Unit<some SegmentationStrategy>, _ rhs: some StringProtocol) -> Bool {
-    return lhs.value == rhs
+    return lhs.rawValue == rhs
 }
 
 // MARK: - First-difference diagnostics

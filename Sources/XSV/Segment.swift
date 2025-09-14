@@ -1,27 +1,38 @@
-import Foundation
+import Swift
 
-public struct Segment<Strategy: UnitStrategy>: UnitProtocol {
+public struct Segment<Strategy: SegmentationStrategy>: UnitProtocol {
     public typealias Strategy = Strategy
     public typealias Element = Strategy.Value
 
     fileprivate enum Storage: Hashable {
-        case materialized(Strategy.Value)
-        case thunk(data: Substring, RangeData)
+        case materialized(Element)
+        case thunk(Memento<Strategy.Value.Strategy>)
     }
     
-    public var value: Substring {
+    public var description: String {
         get {
-            Strategy.merge(self.elements.map { e -> Substring in
+            String(Self.Strategy.unescape(self.rawValue))
+        }
+        set {
+            self = Element(String(Self.Strategy.escape(newValue[...]))).map {
+                Self(CollectionOfOne(.materialized($0)))
+            } ?? Self(EmptyCollection())
+        }
+    }
+    
+    public var rawValue: Substring {
+        get {
+            Strategy.join(self.elements.map { e -> Element in
                 switch e {
                 case .materialized(let segment):
-                    segment.value
-                case .thunk(data: let substring, _):
-                    substring
+                    segment
+                case .thunk(let memento):
+                    Element(memento: memento)
                 }
             })
         }
         set {
-            self = .init(newValue)
+            self = .init(memento: Strategy.split(newValue))
         }
     }
 
@@ -31,28 +42,27 @@ public struct Segment<Strategy: UnitStrategy>: UnitProtocol {
         self.elements = Array(elements)
     }
     
-    public init(memento: Memento<Self>) {
+    public init(memento: Memento<Strategy>) {
         self.init(
-            memento.value.isEmpty ? [] : memento.ranges.ranges.map { .thunk(data: memento.value[$0.range], $0.value) }
+            memento.value.isEmpty ? [] : memento.ranges.ranges.map {
+                .thunk(.init(_value: memento.value[$0.range], _ranges: $0.value))
+            }
         )
+    }
+    
+    public init(rawValue: Substring) {
+        self.init(memento: Self.Strategy.split(rawValue))
+    }
+    
+    public init(_ string: String) {
+        self = Element(string).map { Self(CollectionOfOne(.materialized($0))) } ?? Self(EmptyCollection())
     }
 }
 
 extension Segment: SegmentProtocol where Self.Strategy: SegmentationStrategy { }
 
-extension Segment {
-    public static func memento(_ string: some StringProtocol) -> Memento<Self> {
-        let string = Substring(string)
-        let ranges = RangeData(segmentator: Self.Strategy.segmentator(string))
-        return .init(_value: string, _ranges: ranges)
-    }
-    
-    public init(_ string: some StringProtocol) {
-        self.init(memento: Self.memento(string))
-    }
-}
-
-extension Segment: Sequence & Collection & BidirectionalCollection & RangeReplaceableCollection & RandomAccessCollection & MutableCollection where Self: SegmentProtocol {
+extension Segment: RangeReplaceableCollection & RandomAccessCollection & MutableCollection
+where Self: SegmentProtocol {
     public typealias SubSequence = Slice<Self>
     public typealias Index = Int
 
@@ -67,8 +77,8 @@ extension Segment: Sequence & Collection & BidirectionalCollection & RangeReplac
             switch self.elements[position] {
             case .materialized(let element):
                 return element
-            case .thunk(data: let data, let ranges):
-                return Element(memento: Memento(_value: data, _ranges: ranges))
+            case .thunk(let memento):
+                return Element(memento: memento)
             }
         }
         set { self.elements[position] = .materialized(newValue) }
@@ -107,7 +117,7 @@ extension Segment: ExpressibleByStringLiteral {
 
 extension Segment: Hashable & Equatable {
     public static func ==(lhs: Self, rhs: Self) -> Bool {
-        zip(lhs.elements, rhs.elements).allSatisfy(==)
+        lhs.elements.count == rhs.elements.count && zip(lhs.elements, rhs.elements).allSatisfy(==)
     }
     
     public func hash(into hasher: inout Hasher) {

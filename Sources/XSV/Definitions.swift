@@ -10,18 +10,22 @@ public enum SegmentationAction {
 // MARK: - UnitStrategy
 
 public protocol UnitStrategy {
-    associatedtype Value: ValueProtocol
-    
     init()
     mutating func step(_ string: borrowing Substring) -> SegmentationAction?
     mutating func resetForNewSegment()
     
-    static func merge(_ elements: some Sequence<Substring>) -> Substring
+    static func escape(_ value: Substring) -> Substring
+    static func unescape(_ value: Substring) -> Substring
+}
+
+extension UnitStrategy {
+    public static func escape(_ value: Substring) -> Substring { value }
+    public static func unescape(_ value: Substring) -> Substring { value }
 }
 
 extension UnitStrategy {
     private static var strategyTypes: some Sequence<any UnitStrategy.Type> {
-        func next(of type: (some SegmentationStrategy).Type) -> any UnitStrategy.Type { type.Next.self }
+        func next(of type: (some SegmentationStrategy).Type) -> any UnitStrategy.Type { type.Value.Strategy.self }
         return sequence(first: Self.self) { ($0 as? any SegmentationStrategy.Type).map { next(of: $0) } }
     }
     
@@ -33,9 +37,18 @@ extension UnitStrategy {
 // MARK: - SegmentationStrategy
 
 public protocol SegmentationStrategy: UnitStrategy {
-    associatedtype Value: UnitProtocol = Segment<Next> where Value.Strategy == Next
+    associatedtype Value: UnitProtocol
     
-    associatedtype Next: UnitStrategy
+    static func join(_ elements: some Sequence<Value>) -> Substring
+    static func split(_ value: Substring) -> Memento<Self>
+}
+
+extension SegmentationStrategy {
+    public static func split(_ string: Substring) -> Memento<Self> {
+        guard !string.isEmpty else { return .init(_value: Substring(), _ranges: .init()) }
+        let ranges = RangeData(segmentator: Self.segmentator(string))
+        return .init(_value: string, _ranges: ranges)
+    }
 }
 
 // MARK: - SegmentProtocol
@@ -50,55 +63,48 @@ extension SegmentProtocol {
 
 // MARK: - UnitProtocol
 
-public protocol UnitProtocol: ValueProtocol {
+public protocol UnitProtocol: Hashable & LosslessStringConvertible & RawRepresentable where RawValue == Substring {
     associatedtype Strategy: UnitStrategy
 
-    init(memento: Memento<Self>)
-}
-
-extension UnitProtocol {
-    public var description: String {
-        get { String(self.value) }
-        set { self.value = newValue[...] }
-    }
+    var rawValue: Substring { get set }
+    init(memento: Memento<Self.Strategy>)
 }
 
 // MARK: - Value
 
-public protocol ValueProtocol: Hashable & LosslessStringConvertible {
-    var value: Substring { get set }
-}
-
-extension ValueProtocol where Self: StringProtocol {
-    public var value: Substring {
-        get { Substring(self) }
-        set { self = Self.init(String(newValue)) ?? self }
-    }
-}
-
-extension Substring: ValueProtocol {
-    public var value: Substring {
-        get { self }
-        set { self = newValue }
-    }
-}
-
 extension Never: @retroactive LosslessStringConvertible {}
 extension Never: @retroactive CustomStringConvertible {}
-extension Never: ValueProtocol {
-    public var value: Substring {
+extension Never: @retroactive RawRepresentable {}
+extension Never: UnitProtocol & UnitStrategy {
+    public typealias Value = Never
+    
+    public init() { fatalError() }
+    
+    public mutating func step(_ string: borrowing Substring) -> SegmentationAction? { fatalError() }
+    
+    public mutating func resetForNewSegment() { fatalError() }
+    
+    public static func merge(_ elements: some Sequence<Substring>) -> Substring { fatalError() }
+    
+    public typealias Strategy = Never
+    
+    public init(memento: Memento<Never>) { fatalError() }
+    
+    public var rawValue: Substring {
         get { fatalError() }
         set { fatalError() }
     }
     
-    public init?(_ description: String) { nil }
+    public init(_ description: String) { fatalError() }
     
     public var description: String { fatalError() }
+    
+    public init(rawValue: Substring) { fatalError() }
 }
 
 // MARK: - Memento
 
-public struct Memento<T: UnitProtocol> {
+public struct Memento<T: UnitStrategy>: Hashable {
     internal var value: Substring
     internal var ranges: RangeData
     
