@@ -2,7 +2,7 @@ import Swift
 
 internal typealias SegmentationEvent = (level: Int, range: Range<String.Index>)
 
-internal struct Segmentator: IteratorProtocol {
+internal struct Segmenter: IteratorProtocol {
     public typealias Index = String.Index
     public typealias Element = SegmentationEvent
 
@@ -40,6 +40,8 @@ internal struct Segmentator: IteratorProtocol {
                     case .consume(through: let nextIndex):
                         self.index = nextIndex
                         continue ch
+                    case .buffer:
+                        continue
                     }
                 }
             }

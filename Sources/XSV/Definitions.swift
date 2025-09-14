@@ -5,6 +5,7 @@ import Swift
 public enum SegmentationAction {
     case cut(before: String.Index)
     case consume(through: String.Index)
+    case buffer
 }
 
 // MARK: - UnitStrategy
@@ -25,29 +26,27 @@ extension UnitStrategy {
 
 extension UnitStrategy {
     private static var strategyTypes: some Sequence<any UnitStrategy.Type> {
-        func next(of type: (some SegmentationStrategy).Type) -> any UnitStrategy.Type { type.Value.Strategy.self }
-        return sequence(first: Self.self) { ($0 as? any SegmentationStrategy.Type).map { next(of: $0) } }
+        func next(of type: (some SegmentStrategy).Type) -> any UnitStrategy.Type { type.Value.Strategy.self }
+        return sequence(first: Self.self) { ($0 as? any SegmentStrategy.Type).map { next(of: $0) } }
     }
     
-    internal static func segmentator(_ string: Substring) -> Segmentator {
-        Segmentator(string, strategies: Self.strategyTypes.reversed().map { $0.init() })
+    internal static func segmenter(_ string: Substring) -> Segmenter {
+        Segmenter(string, strategies: Self.strategyTypes.reversed().map { $0.init() })
     }
 }
 
 // MARK: - SegmentationStrategy
 
-public protocol SegmentationStrategy: UnitStrategy {
+public protocol SegmentStrategy: UnitStrategy {
     associatedtype Value: UnitProtocol
     
     static func join(_ elements: some Sequence<Value>) -> Substring
     static func split(_ value: Substring) -> Memento<Self>
 }
 
-extension SegmentationStrategy {
+extension SegmentStrategy {
     public static func split(_ string: Substring) -> Memento<Self> {
-        guard !string.isEmpty else { return .init(_value: Substring(), _ranges: .init()) }
-        let ranges = RangeData(segmentator: Self.segmentator(string))
-        return .init(_value: string, _ranges: ranges)
+        .init(string)
     }
 }
 
@@ -55,10 +54,6 @@ extension SegmentationStrategy {
 
 public protocol SegmentProtocol: UnitProtocol & ExpressibleByArrayLiteral {
     associatedtype Element: UnitProtocol
-}
-
-extension SegmentProtocol {
-    fileprivate static var subSegmentType: (any SegmentProtocol.Type)? { Element.self as? any SegmentProtocol.Type }
 }
 
 // MARK: - UnitProtocol
@@ -70,47 +65,21 @@ public protocol UnitProtocol: Hashable & LosslessStringConvertible & RawRepresen
     init(memento: Memento<Self.Strategy>)
 }
 
-// MARK: - Value
-
-extension Never: @retroactive LosslessStringConvertible {}
-extension Never: @retroactive CustomStringConvertible {}
-extension Never: @retroactive RawRepresentable {}
-extension Never: UnitProtocol & UnitStrategy {
-    public typealias Value = Never
-    
-    public init() { fatalError() }
-    
-    public mutating func step(_ string: borrowing Substring) -> SegmentationAction? { fatalError() }
-    
-    public mutating func resetForNewSegment() { fatalError() }
-    
-    public static func merge(_ elements: some Sequence<Substring>) -> Substring { fatalError() }
-    
-    public typealias Strategy = Never
-    
-    public init(memento: Memento<Never>) { fatalError() }
-    
-    public var rawValue: Substring {
-        get { fatalError() }
-        set { fatalError() }
-    }
-    
-    public init(_ description: String) { fatalError() }
-    
-    public var description: String { fatalError() }
-    
-    public init(rawValue: Substring) { fatalError() }
-}
-
 // MARK: - Memento
 
-public struct Memento<T: UnitStrategy>: Hashable {
+public struct Memento<Strategy: UnitStrategy>: Hashable {
     internal var value: Substring
     internal var ranges: RangeData
     
-    internal init(_value: Substring, _ranges: RangeData) {
-        self.value = _value
-        self.ranges = _ranges
+    internal init(value: Substring, ranges: RangeData) {
+        self.value = value
+        self.ranges = ranges
+    }
+    
+    public init(_ string: some StringProtocol) {
+        let substring = Substring(string)
+        let ranges = RangeData(segmentator: Strategy.segmenter(substring))
+        self.init(value: substring, ranges: ranges)
     }
 }
 

@@ -1,6 +1,6 @@
 import Swift
 
-public struct Segment<Strategy: SegmentationStrategy>: UnitProtocol {
+public struct Segment<Strategy: SegmentStrategy>: UnitProtocol {
     public typealias Strategy = Strategy
     public typealias Element = Strategy.Value
 
@@ -45,7 +45,7 @@ public struct Segment<Strategy: SegmentationStrategy>: UnitProtocol {
     public init(memento: Memento<Strategy>) {
         self.init(
             memento.value.isEmpty ? [] : memento.ranges.ranges.map {
-                .thunk(.init(_value: memento.value[$0.range], _ranges: $0.value))
+                .thunk(.init(value: memento.value[$0.range], ranges: $0.value))
             }
         )
     }
@@ -59,7 +59,7 @@ public struct Segment<Strategy: SegmentationStrategy>: UnitProtocol {
     }
 }
 
-extension Segment: SegmentProtocol where Self.Strategy: SegmentationStrategy { }
+extension Segment: SegmentProtocol where Self.Strategy: SegmentStrategy { }
 
 extension Segment: RangeReplaceableCollection & RandomAccessCollection & MutableCollection
 where Self: SegmentProtocol {

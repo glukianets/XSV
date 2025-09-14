@@ -184,11 +184,11 @@ func == <L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>) -> Bool {
     return true
 }
 
-func == (_ lhs: some StringProtocol, _ rhs: Unit<some SegmentationStrategy>) -> Bool {
+func == (_ lhs: some StringProtocol, _ rhs: Unit<some SegmentStrategy>) -> Bool {
     return lhs == rhs.rawValue
 }
 
-func == (_ lhs: Unit<some SegmentationStrategy>, _ rhs: some StringProtocol) -> Bool {
+func == (_ lhs: Unit<some SegmentStrategy>, _ rhs: some StringProtocol) -> Bool {
     return lhs.rawValue == rhs
 }
 

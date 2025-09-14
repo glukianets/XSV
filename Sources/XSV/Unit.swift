@@ -4,7 +4,7 @@ public struct Unit<Strategy: UnitStrategy>: UnitProtocol {
     public typealias Strategy = Strategy
     
     private static func memento(_ string: some StringProtocol) -> Memento<Strategy> {
-        return .init(_value: Substring(string), _ranges: .init())
+        return .init(value: Substring(string), ranges: .init())
     }
     
     public var rawValue: Substring

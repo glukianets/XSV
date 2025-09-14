@@ -6,7 +6,7 @@ public typealias XSVGroup = Segment<XSVGroupStrategy>
 public typealias XSVRecord = Segment<XSVRecordStrategy>
 public typealias XSVUnit = Unit<XSVUnitStrategy>
 
-internal protocol SeparatorSegmentationStrategy: SegmentationStrategy {
+internal protocol SeparatorSegmentationStrategy: SegmentStrategy {
     static var separator: String { get }
 }
 
