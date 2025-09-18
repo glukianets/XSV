@@ -15,43 +15,9 @@ extension SeparatorSegmentationStrategy {
         _ segment: borrowing Substring,
         options: UnitStrategyParsingOptions
     ) -> SegmentationAction? {
-        let segUTF8 = segment.utf8
-        let sepUTF8 = Self.separator.utf8
-        
-        var sIdx = segUTF8.startIndex
-        let sEnd = segUTF8.endIndex
-        var pIdx = sepUTF8.startIndex
-        let pEnd = sepUTF8.endIndex
-        
-        if pIdx == pEnd { return nil }
-        if sIdx == sEnd { return .buffer }
-        
-        // Fast path for single-byte separator (common here: ASCII control chars).
-        let firstByte = sepUTF8[pIdx]
-        let pNext = sepUTF8.index(after: pIdx)
-        if segUTF8[sIdx] != firstByte {
-            return nil
-        }
-        sIdx = segUTF8.index(after: sIdx)
-        if pNext == pEnd {
-            return .cut(before: sIdx)
-        }
-        
-        // General path for multi-byte separator.
-        pIdx = pNext
-        while true {
-            if pIdx == pEnd {
-                return .cut(before: sIdx)
-            }
-            if sIdx == sEnd {
-                return .buffer
-            }
-            if segUTF8[sIdx] != sepUTF8[pIdx] {
-                return nil
-            }
-            sIdx = segUTF8.index(after: sIdx)
-            pIdx = sepUTF8.index(after: pIdx)
-        }
+        guard let (cutIndex, isParital) = segment.utf8.indexOfPrefix(Self.separator.utf8) else { return .none }
+        guard !isParital else { return options.isAtEnd ? .none : .buffer }
+        return .cut(before: cutIndex)
     }
     
     public mutating func resetForNewSegment() { }
