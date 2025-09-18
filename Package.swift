@@ -13,7 +13,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "XSV"
+            name: "XSV",
         ),
         .testTarget(
             name: "XSVTests",

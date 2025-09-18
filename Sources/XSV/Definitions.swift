@@ -10,9 +10,17 @@ public enum SegmentationAction {
 
 // MARK: - UnitStrategy
 
+public struct UnitStrategyParsingOptions {
+    public let isAtEnd: Bool
+    
+    internal init(isAtEnd: Bool) {
+        self.isAtEnd = isAtEnd
+    }
+}
+
 public protocol UnitStrategy {
     init()
-    mutating func step(_ string: borrowing Substring) -> SegmentationAction?
+    mutating func parse(_ string: borrowing Substring, options: UnitStrategyParsingOptions) -> SegmentationAction?
     mutating func resetForNewSegment()
     
     static func escape(_ value: Substring) -> Substring
@@ -30,8 +38,8 @@ extension UnitStrategy {
         return sequence(first: Self.self) { ($0 as? any SegmentStrategy.Type).map { next(of: $0) } }
     }
     
-    internal static func segmenter(_ string: Substring) -> Segmenter {
-        Segmenter(string, strategies: Self.strategyTypes.reversed().map { $0.init() })
+    internal static func segmenter(_ string: Substring) -> Segmenter<StringProvider> {
+        Segmenter(wrapping: StringProvider(string), strategies: Self.strategyTypes.reversed().map { $0.init() })
     }
 }
 

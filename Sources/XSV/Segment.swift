@@ -45,7 +45,7 @@ public struct Segment<Strategy: SegmentStrategy>: UnitProtocol {
     public init(memento: Memento<Strategy>) {
         self.init(
             memento.value.isEmpty ? [] : memento.ranges.ranges.map {
-                .thunk(.init(value: memento.value[$0.range], ranges: $0.value))
+                .thunk(.init(value: $0.segment, ranges: $0.value))
             }
         )
     }
@@ -124,3 +124,4 @@ extension Segment: Hashable & Equatable {
         hasher.combine(self.elements)
     }
 }
+
