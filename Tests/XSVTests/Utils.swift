@@ -1,7 +1,6 @@
 import Foundation
 import Testing
 @testable import XSV
-import struct XSV.Unit
 
 typealias PackageLike<C> = C where C: RangeReplaceableCollection, C.Element == FileLike<C.Element>
 typealias FileLike<C> = C where C: RangeReplaceableCollection, C.Element == GroupLike<C.Element>
@@ -182,14 +181,6 @@ func == <L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>) -> Bool {
         if u1.description != u2.description { return false }
     }
     return true
-}
-
-func == (_ lhs: some StringProtocol, _ rhs: Unit<some SegmentStrategy>) -> Bool {
-    return lhs == rhs.rawValue
-}
-
-func == (_ lhs: Unit<some SegmentStrategy>, _ rhs: some StringProtocol) -> Bool {
-    return lhs.rawValue == rhs
 }
 
 // MARK: - First-difference diagnostics

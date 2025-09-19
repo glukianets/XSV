@@ -34,12 +34,12 @@ where Wrapped: IteratorProtocol, Wrapped.Element: StringProtocol {
 
     private var wrapped: Wrapped?
     private var string: String
-    private var strategies: [any UnitStrategy]
+    private var strategies: [any ReadingStrategyProtocol]
     private var rangeStarts: [Index]
     private var outputBuffer: [Element]
     private var index: Index
 
-    public init(wrapping upstream: Wrapped, strategies: some Sequence<any UnitStrategy>) {
+    public init(wrapping upstream: Wrapped, strategies: some Sequence<any ReadingStrategyProtocol>) {
         self.wrapped = upstream
         self.string = ""
         self.strategies = Array(strategies)
@@ -56,7 +56,7 @@ where Wrapped: IteratorProtocol, Wrapped.Element: StringProtocol {
         ch: while !self.string.isEmpty && self.index < self.string.endIndex || self.refill() {
             st: for i in self.strategies.indices {
                     bf: while true {
-                        let options = UnitStrategyParsingOptions(isAtEnd: self.wrapped == nil)
+                        let options = SegmentParsingOptions(isAtEnd: self.wrapped == nil)
                         switch self.strategies[i].parse(self.string[self.index...], options: options) {
                         case nil:
                             continue st

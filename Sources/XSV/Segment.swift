@@ -1,65 +1,58 @@
 import Swift
 
-public struct Segment<Strategy: SegmentStrategy>: UnitProtocol {
+public struct Segment<Strategy: SegmentStrategy>: SegmentProtocol {
     public typealias Strategy = Strategy
     public typealias Element = Strategy.Value
 
     fileprivate enum Storage: Hashable {
         case materialized(Element)
-        case thunk(Memento<Strategy.Value.Strategy>)
+        case thunk(Memento<Element>)
     }
     
-    public var description: String {
-        get {
-            String(Self.Strategy.unescape(self.rawValue))
-        }
-        set {
-            self = Element(String(Self.Strategy.escape(newValue[...]))).map {
-                Self(CollectionOfOne(.materialized($0)))
-            } ?? Self(EmptyCollection())
-        }
-    }
-    
-    public var rawValue: Substring {
-        get {
-            Strategy.join(self.elements.map { e -> Element in
-                switch e {
-                case .materialized(let segment):
-                    segment
-                case .thunk(let memento):
-                    Element(memento: memento)
-                }
-            })
-        }
-        set {
-            self = .init(memento: Strategy.split(newValue))
-        }
-    }
-
     private var elements: [Storage]
     
     fileprivate init(_ elements: some Sequence<Storage>) {
         self.elements = Array(elements)
     }
     
-    public init(memento: Memento<Strategy>) {
+    public init(memento: Memento<Self>) {
         self.init(
             memento.value.isEmpty ? [] : memento.ranges.ranges.map {
                 .thunk(.init(value: $0.segment, ranges: $0.value))
             }
         )
     }
-    
-    public init(rawValue: Substring) {
-        self.init(memento: Self.Strategy.split(rawValue))
+}
+
+extension Segment: LosslessStringConvertible {
+    public var description: String {
+        var result = ""
+        self.write(to: &result)
+        return result
     }
-    
-    public init(_ string: String) {
-        self = Element(string).map { Self(CollectionOfOne(.materialized($0))) } ?? Self(EmptyCollection())
+
+    public init(_ description: String) {
+        self.init(memento: .init(description))
     }
 }
 
-extension Segment: SegmentProtocol where Self.Strategy: SegmentStrategy { }
+extension Segment: TextOutputStreamable {
+    public func write(to target: inout some TextOutputStream) {
+        var strategy = Strategy.writingStrategy()
+        strategy.withStream(&target) { withElement in
+            for element in elements {
+                withElement { stream in
+                    switch element {
+                    case .materialized(let segment):
+                        Strategy.dehydrate(segment, into: &stream)
+                    case .thunk(let memento):
+                        memento.value.write(to: &stream)
+                    }
+                }
+            }
+        }
+    }
+}
 
 extension Segment: RangeReplaceableCollection & RandomAccessCollection & MutableCollection
 where Self: SegmentProtocol {
@@ -76,12 +69,14 @@ where Self: SegmentProtocol {
         get {
             switch self.elements[position] {
             case .materialized(let element):
-                return element
+                element
             case .thunk(let memento):
-                return Element(memento: memento)
+                Self.Strategy.rehydrate(memento)
             }
         }
-        set { self.elements[position] = .materialized(newValue) }
+        set {
+            self.elements[position] = .materialized(newValue)
+        }
     }
 
     public subscript(bounds: Range<Int>) -> Slice<Self> {
@@ -124,4 +119,3 @@ extension Segment: Hashable & Equatable {
         hasher.combine(self.elements)
     }
 }
-

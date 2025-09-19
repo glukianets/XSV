@@ -42,3 +42,25 @@ extension Collection {
         return ri < rhs.endIndex ? li >= self.endIndex ? (li, true) : nil : (li, false)
     }
 }
+
+#if canImport(Foundation)
+
+import Foundation
+
+extension Data {
+    internal func sanitized(erasingSeparators range: Range<UInt8>) -> Self {
+        var copy = self
+
+        copy.withUnsafeMutableBytes { buffer in
+            for i in stride(from: 0, to: buffer.count, by: 1) {
+                if range.contains(buffer[i]) {
+                    buffer[i] = 0xFF
+                }
+            }
+        }
+
+        return copy
+    }
+}
+
+#endif // canImport(Foundation)

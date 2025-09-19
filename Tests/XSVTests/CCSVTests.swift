@@ -22,13 +22,13 @@ struct XSVRandomizedTests {
         let model: T = generatePackage(rng: &rng)
         let raw: Data = serializePackage(model)
 
-        let parsed = XSV(rawValue: Substring(String(decoding: raw, as: UTF8.self)))
+        let parsed = XSV(parsing: String(decoding: raw, as: UTF8.self))
         
         #expect(diffPackage(parsed, model) == nil, "Parsed value mismatch")
 
         try #require(parsed == model, "Parsed value mismatch")
 
-        let reserialized = parsed.rawValue.data(using: .utf8)!
+        let reserialized = parsed.data(using: .utf8)!
         #expect(reserialized == raw, "Round-trip mismatch")
     }
     
