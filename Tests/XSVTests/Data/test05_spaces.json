@@ -1,0 +1,17 @@
+[
+  [
+    "left",
+    "right",
+    "both"
+  ],
+  [
+    "  lead",
+    "trail  ",
+    "  both  "
+  ],
+  [
+    "  lead (quoted)",
+    "trail (quoted)  ",
+    "  both (unquoted)  "
+  ]
+]

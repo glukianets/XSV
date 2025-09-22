@@ -19,7 +19,7 @@ public struct SeparatorParserStrategy: ReadingStrategyProtocol {
     ) -> SegmentationAction? {
         guard let (cutIndex, isParital) = segment.utf8.indexOfPrefix(self.separator.utf8) else { return .none }
         guard !isParital else { return options.isAtEnd ? .none : .buffer }
-        return .cut(before: cutIndex)
+        return .cut(before: segment.startIndex, consumingUntil: cutIndex)
     }
     
     public mutating func resetForNewSegment() { }

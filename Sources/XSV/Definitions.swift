@@ -1,6 +1,6 @@
 import Swift
 
-// MARK: - SegmentationStrategy Supplementaries
+// MARK: - SegmentStrategy Supplementaries
 
 public struct SegmentParsingOptions {
     public let isAtEnd: Bool
@@ -11,7 +11,7 @@ public struct SegmentParsingOptions {
 }
 
 public enum SegmentationAction {
-    case cut(before: String.Index)
+    case cut(before: String.Index, consumingUntil: String.Index)
     case consume(through: String.Index)
     case buffer
 }
@@ -19,6 +19,14 @@ public enum SegmentationAction {
 public protocol ReadingStrategyProtocol {
     mutating func parse(_ string: borrowing Substring, options: SegmentParsingOptions) -> SegmentationAction?
     mutating func resetForNewSegment()
+}
+
+extension ReadingStrategyProtocol {
+    public mutating func resetForNewSegment() { /* nothing */ }
+    public mutating func parse(
+        _ string: borrowing Substring,
+        options: SegmentParsingOptions
+    ) -> SegmentationAction? { nil }
 }
 
 public protocol WritingStrategyProtocol {
@@ -31,7 +39,17 @@ public protocol WritingStrategyProtocol {
     mutating func processElement(_ contents: consuming String) -> String?
 }
 
-// MARK: - SegmentationStrategy
+extension WritingStrategyProtocol {
+    public func openSegment() -> String? { nil }
+    public func closeSegment() -> String? { nil }
+
+    public func openElement() -> String? { nil }
+    public func closeElement() -> String? { nil }
+
+    public func processElement(_ contents: consuming String) -> String? { contents }
+}
+
+// MARK: - SegmentStrategy
 
 public protocol SegmentStrategy {
     associatedtype Value: Hashable

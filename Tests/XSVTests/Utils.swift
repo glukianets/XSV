@@ -45,8 +45,7 @@ struct GenerationConfig {
     let unitSizeRange = 1...5
 }
 
-func generatePackage<C>(rng: inout LCG, config: GenerationConfig = .init()) -> C where C == PackageLike<C>
-{
+func generatePackage<C>(rng: inout LCG, config: GenerationConfig = .init()) -> C where C == PackageLike<C> {
     var model: C = .init()
 
     let fCount = rng.nextInt(in: config.filesRange)
@@ -152,6 +151,10 @@ func serializeUnit<C>(_ units: C) -> Data where C == RecordLike<C> {
 // MARK: - Comparison
 
 func == <L, R>(_ lhs: PackageLike<L>, _ rhs: PackageLike<R>) -> Bool {
+    areEqualPackages(lhs, rhs)
+}
+
+func areEqualPackages<L, R>(_ lhs: PackageLike<L>, _ rhs: PackageLike<R>) -> Bool {
     guard lhs.count == rhs.count else { return false }
     for (f1, f2) in zip(lhs, rhs) {
         if !(==)(f1, f2) { return false }
@@ -160,6 +163,10 @@ func == <L, R>(_ lhs: PackageLike<L>, _ rhs: PackageLike<R>) -> Bool {
 }
 
 func == <L, R>(_ lhs: FileLike<L>, _ rhs: FileLike<R>) -> Bool {
+    areEqualFiles(lhs, rhs)
+}
+
+func areEqualFiles<L, R>(_ lhs: FileLike<L>, _ rhs: FileLike<R>) -> Bool {
     guard lhs.count == rhs.count else { return false }
     for (g1, g2) in zip(lhs, rhs) {
         if !(==)(g1, g2) { return false }
@@ -168,6 +175,10 @@ func == <L, R>(_ lhs: FileLike<L>, _ rhs: FileLike<R>) -> Bool {
 }
 
 func == <L, R>(_ lhs: GroupLike<L>, _ rhs: GroupLike<R>) -> Bool {
+    areEqualGroups(lhs, rhs)
+}
+
+func areEqualGroups<L, R>(_ lhs: GroupLike<L>, _ rhs: GroupLike<R>) -> Bool {
     guard lhs.count == rhs.count else { return false }
     for (r1, r2) in zip(lhs, rhs) {
         if !(==)(r1, r2) { return false }
@@ -176,6 +187,10 @@ func == <L, R>(_ lhs: GroupLike<L>, _ rhs: GroupLike<R>) -> Bool {
 }
 
 func == <L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>) -> Bool {
+    areEqualRecords(lhs, rhs)
+}
+
+func areEqualRecords<L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>) -> Bool {
     guard lhs.count == rhs.count else { return false }
     for (u1, u2) in zip(lhs, rhs) {
         if u1.description != u2.description { return false }

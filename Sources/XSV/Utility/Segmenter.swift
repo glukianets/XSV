@@ -60,9 +60,10 @@ where Wrapped: IteratorProtocol, Wrapped.Element: StringProtocol {
                         switch self.strategies[i].parse(self.string[self.index...], options: options) {
                         case nil:
                             continue st
-                        case .cut(before: let nextIndex):
-                            assert(self.index...self.string.endIndex ~= nextIndex)
-                            self.close(at: i + 1, continueAt: nextIndex)
+                        case .cut(before: let index, consumingUntil: let nextIndex):
+                            assert(self.index...self.string.endIndex ~= index)
+                            assert(index...self.string.endIndex ~= nextIndex)
+                            self.close(at: i + 1, index: index, continueAt: nextIndex)
                             continue el
                         case .consume(through: let nextIndex):
                             self.index = self.string.index(after: nextIndex)
@@ -76,7 +77,7 @@ where Wrapped: IteratorProtocol, Wrapped.Element: StringProtocol {
                 }
                 self.string.formIndex(after: &self.index)
             }
-            self.close(at: self.strategies.count, continueAt: self.string.endIndex)
+            self.close(at: self.strategies.count, index: self.string.endIndex, continueAt: self.string.endIndex)
             self.strategies = []
         } while self.index < self.string.endIndex || !self.outputBuffer.isEmpty
         
@@ -84,9 +85,9 @@ where Wrapped: IteratorProtocol, Wrapped.Element: StringProtocol {
     }
     
     @inline(__always)
-    private mutating func close(at level: Int, continueAt nextIndex: Index) {
+    private mutating func close(at level: Int, index: Index, continueAt nextIndex: Index) {
         for i in (0..<level).reversed() {
-            let segment = self.string[self.rangeStarts[i]..<self.index]
+            let segment = self.string[self.rangeStarts[i]..<index]
             self.outputBuffer.append(SegmentationEvent(level: i, segment: segment))
             self.rangeStarts[i] = nextIndex
             self.strategies[i].resetForNewSegment()

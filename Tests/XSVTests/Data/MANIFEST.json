@@ -1,0 +1,9 @@
+[
+  "test01_basic",
+  "test02_commas_and_quotes",
+  "test03_newlines_in_quoted_fields",
+  "test04_empty_fields",
+  "test05_spaces",
+  "test06_no_trailing_crlf",
+  "test07_utf8_bom",
+]

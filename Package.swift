@@ -17,7 +17,10 @@ let package = Package(
         ),
         .testTarget(
             name: "XSVTests",
-            dependencies: ["XSV"]
+            dependencies: ["XSV"],
+            resources: [
+                .process("Data")
+            ],
         ),
     ],
     swiftLanguageModes: [.v6],

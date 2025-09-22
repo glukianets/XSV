@@ -21,7 +21,7 @@ extension Range where Bound: Strideable, Bound.Stride == Bound {
 }
 
 @inline(__always)
-func firstIndexOfDivergence<L: Collection, R: Collection>(
+internal func firstIndicesOfDivergence<L: Collection, R: Collection>(
     _ lhs: L,
     _ rhs: R,
     predicate: (L.Element, R.Element) throws -> Bool
@@ -36,9 +36,9 @@ func firstIndexOfDivergence<L: Collection, R: Collection>(
 
 extension Collection {
     @inline(__always)
-    func indexOfPrefix<R>(_ rhs: R) -> (Self.Index, partial: Bool)?
+    internal func indexOfPrefix<R>(_ rhs: R) -> (Self.Index, partial: Bool)?
     where R: Collection, R.Element == Self.Element, Self.Element: Comparable {
-        let (li, ri) = firstIndexOfDivergence(self, rhs, predicate: ==)
+        let (li, ri) = firstIndicesOfDivergence(self, rhs, predicate: ==)
         return ri < rhs.endIndex ? li >= self.endIndex ? (li, true) : nil : (li, false)
     }
 }
