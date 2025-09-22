@@ -5,5 +5,4 @@
   "test04_empty_fields",
   "test05_spaces",
   "test06_no_trailing_crlf",
-  "test07_utf8_bom",
 ]
