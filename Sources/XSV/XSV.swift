@@ -9,9 +9,12 @@ public typealias XSVUnit = String
 public struct SeparatorParserStrategy: ReadingStrategyProtocol {
     private let separator: String
     
-    public init(separator: String) {
+    public init(separator: String, options: ReadingStrategyOptions = .default) {
         self.separator = separator
+        self.options = options
     }
+    
+    public var options: ReadingStrategyOptions
     
     public mutating func parse(
         _ segment: borrowing Substring,
@@ -28,7 +31,7 @@ public struct SeparatorParserStrategy: ReadingStrategyProtocol {
 public struct SeparatorWritingStrategy: WritingStrategyProtocol {
     private let separator: String
     private var hadPreviousElement: Bool = false
-        
+    
     public init(separator: String) {
         self.separator = separator
     }

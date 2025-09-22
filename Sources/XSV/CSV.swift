@@ -16,6 +16,8 @@ public struct CSVRowStrategy: SegmentStrategy {
     public typealias Value = String
     
     public struct ReadingStrategy: ReadingStrategyProtocol {
+        public var options: ReadingStrategyOptions = [.skipEmptyAtEnd]
+        
         public mutating func parse(
             _ string: borrowing Substring,
             options: SegmentParsingOptions
@@ -68,6 +70,8 @@ public struct CSVFileStrategy: SegmentStrategy {
     public typealias Value = CSVRow
     
     public struct ReadingStrategy: ReadingStrategyProtocol {
+        public var options: ReadingStrategyOptions { [.skipEmptyAtEnd] }
+        
         public mutating func parse(
             _ string: borrowing Substring,
             options: SegmentParsingOptions
@@ -81,7 +85,7 @@ public struct CSVFileStrategy: SegmentStrategy {
                 }
                 if index >= bytes.endIndex {
                     // The last newline is skipped since it doesn't denote an element separator
-                    return options.isAtEnd ? .consume(through: bytes.startIndex) : .buffer
+                    return options.isAtEnd ? .cut(before: string.startIndex, consumingUntil: index) : .buffer
                 } else {
                     return .cut(before: string.startIndex, consumingUntil: index)
                 }
