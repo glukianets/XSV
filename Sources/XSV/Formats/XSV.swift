@@ -6,42 +6,6 @@ public typealias XSVGroup = Segment<XSVRecordStrategy>
 public typealias XSVRecord = Segment<XSVUnitStrategy>
 public typealias XSVUnit = String
 
-internal struct SeparatorParserStrategy: ReadingStrategyProtocol {
-    private let separator: String
-    
-    public init(separator: String, options: ReadingStrategyOptions) {
-        self.separator = separator
-        self.options = options
-    }
-    
-    public var options: ReadingStrategyOptions
-    
-    public mutating func parse(
-        _ segment: borrowing Substring,
-        options: SegmentParsingOptions
-    ) -> SegmentationAction? {
-        guard let (cutIndex, isParital) = segment.utf8.indexOfPrefix(self.separator.utf8) else { return .none }
-        guard !isParital else { return options.isAtEnd ? .none : .buffer }
-        return .cut(before: segment.startIndex, consumingUntil: cutIndex)
-    }
-    
-    public mutating func resetForNewSegment() { }
-}
-
-internal struct SeparatorWritingStrategy: WritingStrategyProtocol {
-    private let separator: String
-    private var hadPreviousElement: Bool = false
-    
-    public init(separator: String) {
-        self.separator = separator
-    }
-    
-    public mutating func openElement() -> String? {
-        guard self.hadPreviousElement else { self.hadPreviousElement = true; return nil }
-        return self.separator
-    }
-}
-
 internal protocol SeparatorSegmentationStrategy: SegmentStrategy {
     static var separator: String { get }
     static var isEphemeral: Bool { get }
