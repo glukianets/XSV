@@ -16,7 +16,7 @@ public struct CSVRowStrategy: SegmentStrategy {
     public typealias Value = String
     
     public struct ReadingStrategy: ReadingStrategyProtocol {
-        public var options: ReadingStrategyOptions = [.skipEmptyAtEnd]
+        public var options: ReadingStrategyOptions = [.skipsEmptyAtEnd]
         
         public mutating func parse(
             _ string: borrowing Substring,
@@ -70,7 +70,7 @@ public struct CSVFileStrategy: SegmentStrategy {
     public typealias Value = CSVRow
     
     public struct ReadingStrategy: ReadingStrategyProtocol {
-        public var options: ReadingStrategyOptions { [.skipEmptyAtEnd] }
+        public var options: ReadingStrategyOptions { [.skipsEmptyAtEnd, .transient] }
         
         public mutating func parse(
             _ string: borrowing Substring,

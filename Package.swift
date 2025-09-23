@@ -1,10 +1,10 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.1
 
 import PackageDescription
 
 let package = Package(
     name: "XSV",
-    platforms: [.iOS(.v26), .macOS(.v26), .macCatalyst(.v26), .watchOS(.v26), .tvOS(.v26), .visionOS(.v26)],
+    platforms: [.macOS(.v15)],
     products: [
         .library(
             name: "XSV",

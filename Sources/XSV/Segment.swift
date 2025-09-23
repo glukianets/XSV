@@ -16,11 +16,7 @@ public struct Segment<Strategy: SegmentStrategy>: SegmentProtocol {
     }
     
     public init(memento: Memento<Self>) {
-        self.init(
-            memento.value.isEmpty ? [] : memento.ranges.ranges.map {
-                .thunk(.init(value: $0.segment, ranges: $0.value))
-            }
-        )
+        self.init(memento.ranges.ranges.map { .thunk(.init(value: $0.segment, ranges: $0.value)) })
     }
 }
 
@@ -46,7 +42,11 @@ extension Segment: TextOutputStreamable {
                     case .materialized(let segment):
                         Strategy.dehydrate(segment, into: &stream)
                     case .thunk(let memento):
-                        memento.value.write(to: &stream)
+                        if memento.value.isEmpty && !memento.ranges.ranges.isEmpty {
+                            Strategy.dehydrate(Strategy.rehydrate(memento), into: &stream)
+                        } else {
+                            memento.value.write(to: &stream)
+                        }
                     }
                 }
             }

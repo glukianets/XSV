@@ -8,10 +8,6 @@ internal struct RangeData: Hashable {
     
     internal var ranges: [Element]
     
-    internal var isEmpty: Bool {
-        self.ranges.isEmpty || self.ranges.first!.segment.isEmpty
-    }
-    
     internal init() {
         self.ranges = []
     }
@@ -30,7 +26,7 @@ internal struct RangeData: Hashable {
             levels[0..<level] = .init(repeating: .init(), count: level)
         }
         
-        self = levels.last { !$0.isEmpty } ?? .init()
+        self = levels.last ?? .init()
     }
     
     fileprivate init(ranges: [Element]) {

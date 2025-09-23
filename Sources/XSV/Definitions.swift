@@ -19,32 +19,14 @@ public enum SegmentationAction {
 public struct ReadingStrategyOptions: OptionSet & Sendable {
     public typealias RawValue = UInt64
     
-    internal struct SkipMask: OptionSet & Sendable {
-        public typealias RawValue = ReadingStrategyOptions.RawValue
-        
-        public static let atStart: Self = .init(rawValue: 1 << 3)
-        public static let inTheMiddle: Self = .init(rawValue: 1 << 2)
-        public static let atEnd: Self = .init(rawValue: 1 << 1)
-        public static let all: Self = [.atStart, .inTheMiddle, .atEnd]
-
-        public var options: ReadingStrategyOptions { .init(rawValue: self.rawValue) }
-        
-        public let rawValue: RawValue
-        
-        public init(rawValue: RawValue) {
-            self.rawValue = rawValue
-        }
-    }
-
     public static let `default`: Self = .init(rawValue: 0)
 
     public static let transient: Self = .init(rawValue: 1 << 0)
     
-    public static let skipEmptyAtStart: Self = .init(rawValue: SkipMask.atStart.rawValue)
-    public static let skipEmptyInTheMiddle: Self = .init(rawValue: SkipMask.inTheMiddle.rawValue)
-    public static let skipEmptyAtEnd: Self = .init(rawValue: SkipMask.atEnd.rawValue)
-    public static let skipEmpty: Self = .init(rawValue: SkipMask.all.rawValue)
-    internal var skipMask: SkipMask { .init(rawValue: self.rawValue & SkipMask.all.rawValue) }
+    public static let skipsEmptyAtStart: Self = .init(rawValue: 1 << 3)
+    public static let skipsEmptyInTheMiddle: Self = .init(rawValue: 1 << 2)
+    public static let skipsEmptyAtEnd: Self = .init(rawValue: 1 << 1)
+    public static let skipsEmpty: Self = [.skipsEmptyAtStart, .skipsEmptyInTheMiddle, .skipsEmptyAtEnd]
 
     public let rawValue: RawValue
     

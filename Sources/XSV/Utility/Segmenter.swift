@@ -84,7 +84,6 @@ where Wrapped: IteratorProtocol, Wrapped.Element: StringProtocol {
                 } else {
                     Substring()
                 }
-                self.string[self.rangeStarts[i]..<index]
                 self.outputBuffer.append(SegmentationEvent(level: i, segment: segment))
             }
             self.rangeStarts[i] = nextIndex
@@ -132,3 +131,26 @@ where Wrapped: IteratorProtocol, Wrapped.Element: StringProtocol {
         }
     }
 }
+
+// MARK: - ReadingStrategyOptions.SkipMask
+
+extension ReadingStrategyOptions {
+    fileprivate struct SkipMask: OptionSet & Sendable {
+        public typealias RawValue = ReadingStrategyOptions.RawValue
+        
+        public static let atStart: Self = .init(rawValue: ReadingStrategyOptions.skipsEmptyAtStart.rawValue)
+        public static let inTheMiddle: Self = .init(rawValue: ReadingStrategyOptions.skipsEmptyInTheMiddle.rawValue)
+        public static let atEnd: Self = .init(rawValue: ReadingStrategyOptions.skipsEmptyAtEnd.rawValue)
+        
+        public var options: ReadingStrategyOptions { .init(rawValue: self.rawValue) }
+        
+        public let rawValue: RawValue
+        
+        public init(rawValue: RawValue) {
+            self.rawValue = rawValue
+        }
+    }
+    
+    fileprivate var skipMask: SkipMask { .init(rawValue: self.rawValue & ReadingStrategyOptions.skipsEmpty.rawValue) }
+}
+
