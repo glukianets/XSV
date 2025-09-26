@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import XSV
 
-@Suite("Data-driven XSV tests")
+@Suite("Data-driven XSV tests", .serialized)
 struct DataDrivenXSVTests {
     enum TestError: Error {
         case missingManifest
@@ -24,15 +24,11 @@ struct DataDrivenXSVTests {
         let baseName: String
         let jsonURL: URL
         let csvURL: URL?
+        let tsvURL: URL?
 
         var description: String {
-            // This is what shows up in the test list per argument.
-            // Example: "Orders (csv+json)" or "Users (json)"
-            if csvURL != nil {
-                return "\(baseName) (csv+json)"
-            } else {
-                return "\(baseName) (json)"
-            }
+            let markers: String = [self.csvURL, self.tsvURL].compactMap(\.?.pathExtension).joined(separator: ", ")
+            return "\(self.baseName)(\(markers))"
         }
     }
     
@@ -55,7 +51,8 @@ struct DataDrivenXSVTests {
                 let json = self.bundle.url(forResource: base, withExtension: "json")
             else { throw TestError.missingCaseFile(base) }
             let csv = self.bundle.url(forResource: base, withExtension: "csv")
-            return .init(baseName: base, jsonURL: json, csvURL: csv)
+            let tsv = self.bundle.url(forResource: base, withExtension: "tsv")
+            return .init(baseName: base, jsonURL: json, csvURL: csv, tsvURL: tsv)
         }
     }
 
@@ -67,25 +64,41 @@ struct DataDrivenXSVTests {
         }
     }
 
-    @Test("DataTest", arguments: cases)
-    func run(case dataCase: TestCase) throws {
-        let jsonData = try Data(contentsOf: dataCase.jsonURL)
-
-        if let csvURL = dataCase.csvURL {
-            let csvData = try Data(contentsOf: csvURL)
-            try runCSVTest(jsonData: jsonData, csvData: csvData, baseName: dataCase.baseName)
+    @Test(arguments: cases)
+    func testCSV(case dataCase: TestCase) throws {
+        guard let csvURL = dataCase.csvURL else {
+            Issue.record("No CSV file provided for \(dataCase.baseName)")
+            return
         }
-    }
 
-    // MARK: - Your test logic
-
-    private func runCSVTest(jsonData: Data, csvData: Data, baseName: String) throws {
+        let jsonData = try Data(contentsOf: dataCase.jsonURL)
         let expected = try JSONDecoder().decode([[String]].self, from: jsonData)
-        let actual = CSV(parsing: csvData, encoding: .utf8)
+        
+        let testData = try Data(contentsOf: csvURL)
+        let actual = CSV(parsing: testData, encoding: .utf8)
         
         try #require(actual != nil, "Failed to parse CSV data")
-        let actualSimple: [[String]] = actual!.map { $0.map { $0 } }
+        let actualModel: [[String]] = morphGroup(actual!)
         
-        #expect(areEqualGroups(expected, actualSimple), "diff: \(diffGroup(expected, actualSimple))")
+        #expect(areEqualGroups(expected, actualModel), "diff: \(diffGroup(expected, actualModel))")
+    }
+
+    @Test(arguments: cases)
+    func testTSV(case dataCase: TestCase) throws {
+        guard let tsvURL = dataCase.tsvURL else {
+            Issue.record("No CSV file provided for \(dataCase.baseName)")
+            return
+        }
+        
+        let jsonData = try Data(contentsOf: dataCase.jsonURL)
+        let expected = try JSONDecoder().decode([[String]].self, from: jsonData)
+
+        let testData = try Data(contentsOf: tsvURL)
+        let actual = TSV(parsing: testData, encoding: .utf8)
+        
+        try #require(actual != nil, "Failed to parse TSV data")
+        let actualModel: [[String]] = morphGroup(actual!)
+        
+        #expect(areEqualGroups(expected, actualModel), "diff: \(diffGroup(expected, actualModel))")
     }
 }

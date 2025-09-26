@@ -3,32 +3,30 @@ import Swift
 public typealias CSV = Segment<CSVFileStrategy>
 public typealias CSVRow = Segment<CSVRowStrategy>
 
-private struct Constants {
-    static let comma: UInt8 = 0x2C
-    static let doublequote: UInt8 = 0x22
-}
-
 // MARK: - CSVRowStrategy
 
 public struct CSVRowStrategy: SegmentStrategy {
     public typealias Value = String
-    
-    public struct WritingStrategy: WritingStrategyProtocol { }
+    private static let escapeAlgorithm: EscapeAlgorithm = .rfc4180
     
     public static func readingStrategy() -> some ReadingStrategyProtocol {
-        SeparatorParserStrategy(separator: "\u{2C}", options: [.skipsEmptyAtEnd], escapeAlgorithm: .rfc4180)
+        SeparatorParserStrategy(
+            separator: "\u{2C}",
+            options: [.skipsEmptyAtEnd],
+            escapeAlgorithm: self.escapeAlgorithm
+        )
     }
 
-    public static func writingStrategy() -> WritingStrategy {
-        .init()
+    public static func writingStrategy() -> some WritingStrategyProtocol {
+        return SeparatorWritingStrategy(separator: ",")
     }
     
     public static func rehydrate(_ memento: Memento<Value>) -> Value {
-        Value(memento.value).csvUnescaped()
+        Value(Self.escapeAlgorithm.unescape(memento.value))
     }
     
     public static func dehydrate(_ value: Value, into stream: inout some TextOutputStream) {
-        value.csvEscaped().write(to: &stream)
+        Self.escapeAlgorithm.escape(value[...]).write(to: &stream)
     }
 }
 
@@ -36,11 +34,7 @@ public struct CSVRowStrategy: SegmentStrategy {
 
 public struct CSVFileStrategy: SegmentStrategy {
     public typealias Value = CSVRow
-    
-    public struct WritingStrategy: WritingStrategyProtocol {
-        //
-    }
-    
+        
     public static func rehydrate(_ memento: Memento<Value>) -> Value {
         Value(memento: memento)
     }
@@ -53,8 +47,8 @@ public struct CSVFileStrategy: SegmentStrategy {
         LineReadingStrategy()
     }
 
-    public static func writingStrategy() -> WritingStrategy {
-        .init()
+    public static func writingStrategy() -> some WritingStrategyProtocol {
+        LineWritingStrategy(separator: [.cr, .lf])
     }
 }
 

@@ -86,7 +86,7 @@ public protocol SegmentStrategy {
 }
 
 extension SegmentStrategy {
-    private static var strategyTypes: some Sequence<any SegmentStrategy.Type> {
+    fileprivate static var strategyTypes: some Sequence<any SegmentStrategy.Type> {
         func next(of type: (some SegmentStrategy).Type) -> (any SegmentStrategy.Type)? {
             (type.Value as? any SegmentProtocol.Type)?.strategyType
         }

@@ -15,3 +15,28 @@ internal struct SeparatorWritingStrategy: WritingStrategyProtocol {
         return self.separator
     }
 }
+
+// MARK: - LineWritingStrategy
+
+internal struct LineWritingStrategy: WritingStrategyProtocol {
+    public struct Separator: OptionSet {
+        public let rawValue: UInt8
+        
+        public static let cr: Separator = .init(rawValue: 0xD)
+        public static let lf: Separator = .init(rawValue: 0xA)
+        
+        public init(rawValue: UInt8) {
+            self.rawValue = rawValue
+        }
+    }
+    
+    private let separator: String
+    
+    public init(separator: Separator) {
+        self.separator = (separator.contains(Separator.cr) ? "\r" : "") + (separator.contains(Separator.lf) ? "\n" : "")
+    }
+    
+    public mutating func closeElement() -> String? {
+        self.separator
+    }
+}

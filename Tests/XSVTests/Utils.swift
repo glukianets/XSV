@@ -257,3 +257,21 @@ func diffRecord<L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>, path: String =
     }
     return nil
 }
+
+// MARK: - Morphing
+
+func morphPackage<L, R>(_ lhs: PackageLike<L>, into rhs: PackageLike<R>.Type = R.self) -> R {
+    return .init(lhs.compactMap { morphFile($0) })
+}
+
+func morphFile<L, R>(_ lhs: FileLike<L>, into rhs: FileLike<R>.Type = R.self) -> R {
+    return .init(lhs.compactMap { morphGroup($0) })
+}
+
+func morphGroup<L, R>(_ lhs: GroupLike<L>, into rhs: GroupLike<R>.Type = R.self) -> R {
+    return .init(lhs.compactMap { morphRecord($0) })
+}
+
+func morphRecord<L, R>(_ lhs: RecordLike<L>, into rhs: RecordLike<R>.Type = R.self) -> R {
+    return .init(lhs.compactMap { R.Element.init($0.description) })
+}

@@ -19,6 +19,6 @@ extension SegmentProtocol {
 
 extension SegmentProtocol {
     public init(parsing string: some StringProtocol) {
-        self.init(memento: .init(string))
+        self.init(memento: Memento<Self>(string))
     }
 }

@@ -39,13 +39,8 @@ internal struct LineReadingStrategy: ReadingStrategyProtocol {
 
 // MARK: - SeparatorParserStrategy
 
-public struct SeparatorParserStrategy: ReadingStrategyProtocol {
-    public enum EscapeAlgorithm {
-        case quotation(symbol: UnicodeScalar)
-        
-        public static var rfc4180: Self { self.quotation(symbol: "\"") }
-    }
-    
+internal struct SeparatorParserStrategy: ReadingStrategyProtocol {
+
     public private(set) var options: ReadingStrategyOptions
     private let separator: String
     private let escapeAlgorithm: EscapeAlgorithm?
@@ -60,26 +55,8 @@ public struct SeparatorParserStrategy: ReadingStrategyProtocol {
         _ string: borrowing Substring,
         options: SegmentParsingOptions
     ) -> SegmentationAction? {
-        switch self.escapeAlgorithm {
-        case .quotation(let symbol)?:
-            let string = string.unicodeScalars
-            guard string.first == symbol else { break }
-            var index = string.index(after: string.startIndex)
-            
-            while index < string.endIndex {
-                if string[index] == symbol {
-                    let nextIndex = string.index(after: index)
-                    guard nextIndex < string.endIndex || options.isAtEnd else { return .buffer }
-                    guard string[nextIndex] == symbol else { return .consume(through: index) }
-                    index = nextIndex
-                }
-                string.formIndex(after: &index)
-            }
-            
-            return options.isAtEnd ? nil : .buffer
-
-        case nil:
-            break
+        if let action = self.escapeAlgorithm?.parse(string, options: options) {
+            return action
         }
         
         guard let (cutIndex, isParital) = string.utf8.indexOfPrefix(self.separator.utf8) else { return nil }
