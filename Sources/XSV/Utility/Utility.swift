@@ -10,7 +10,6 @@ internal func ??=<T>(_ lhs: inout T?, _ rhs: @autoclosure () -> T?) -> T? {
     return lhs
 }
 
-
 extension Range where Bound: Strideable, Bound.Stride == Bound {
     internal func rebased(relativeTo parent: Range<Bound>) -> Range<Bound> {
         let clamped = self.clamped(to: parent)
@@ -21,7 +20,7 @@ extension Range where Bound: Strideable, Bound.Stride == Bound {
 }
 
 @inline(__always)
-internal func firstIndicesOfDivergence<L: Collection, R: Collection>(
+internal func firstDivergence<L: Collection, R: Collection>(
     _ lhs: L,
     _ rhs: R,
     predicate: (L.Element, R.Element) throws -> Bool
@@ -36,10 +35,22 @@ internal func firstIndicesOfDivergence<L: Collection, R: Collection>(
 
 extension Collection {
     @inline(__always)
-    internal func indexOfPrefix<R>(_ rhs: R) -> (Self.Index, partial: Bool)?
+    internal func indexAfter<R>(prefix rhs: R) -> (Self.Index, partial: Bool)?
     where R: Collection, R.Element == Self.Element, Self.Element: Comparable {
-        let (li, ri) = firstIndicesOfDivergence(self, rhs, predicate: ==)
+        let (li, ri) = firstDivergence(self, rhs, predicate: ==)
         return ri < rhs.endIndex ? li >= self.endIndex ? (li, true) : nil : (li, false)
+    }
+}
+extension Collection {
+    @inline(__always)
+    internal func firstRange<R>(of rhs: R) -> (Range<Self.Index>, partial: Bool)?
+    where R: Collection, R.Element == Self.Element, Self.Element: Comparable {
+        for startIndex in self.indices {
+            if let next = self[startIndex...].indexAfter(prefix: rhs) {
+                return (startIndex..<next.0, next.partial)
+            }
+        }
+        return nil
     }
 }
 

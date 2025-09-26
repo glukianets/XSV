@@ -8,7 +8,13 @@ public typealias TSVRow = Segment<TSVRowStrategy>
 public struct TSVRowStrategy: SegmentStrategy {
     public typealias Value = String
     
-    private static let escapeAlgorithm: EscapeAlgorithm = .prefix(symbol: "\\", whitelist: [])
+    private static let escapeAlgorithm: EscapeAlgorithm = .prefix(symbol: "\\", replacements: [
+        "\\": "\\",
+        "\t": "\t",
+        "\r\n": "\r\n",
+        "\r": "\r",
+        "\n": "\n",
+    ])
     
     public static func readingStrategy() -> some ReadingStrategyProtocol {
         SeparatorParserStrategy(

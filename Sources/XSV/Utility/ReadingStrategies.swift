@@ -59,7 +59,7 @@ internal struct SeparatorParserStrategy: ReadingStrategyProtocol {
             return action
         }
         
-        guard let (cutIndex, isParital) = string.utf8.indexOfPrefix(self.separator.utf8) else { return nil }
+        guard let (cutIndex, isParital) = string.utf8.indexAfter(prefix: self.separator.utf8) else { return nil }
         guard !isParital else { return options.isAtEnd ? nil : .buffer }
         return .cut(before: string.startIndex, consumingUntil: cutIndex)
     }

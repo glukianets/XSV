@@ -2,7 +2,7 @@ import Swift
 
 internal enum EscapeAlgorithm: Sendable & Hashable {
     case surround(symbol: String)
-    case prefix(symbol: String, whitelist: [String])
+    case prefix(symbol: String, replacements: [String: String])
     
     public static var rfc4180: Self { self.surround(symbol: "\"") }
     
@@ -13,18 +13,18 @@ internal enum EscapeAlgorithm: Sendable & Hashable {
         switch self {
         case .surround(let symbol):
             precondition(!symbol.isEmpty)
-            guard var (index, isPartial) = string.indexOfPrefix(symbol) else { break }
+            guard var (index, isPartial) = string.indexAfter(prefix: symbol) else { break }
             guard !isPartial else { return options.isAtEnd ? .some(nil) : .buffer }
             
             while index < string.endIndex {
-                guard let next = string[index...].indexOfPrefix(symbol) else {
+                guard let next = string[index...].indexAfter(prefix: symbol) else {
                     string.formIndex(after: &index)
                     continue
                 }
                 (index, isPartial) = next
                 guard !isPartial else { return options.isAtEnd ? .some(nil) : .buffer }
                 
-                guard let next = string[index...].indexOfPrefix(symbol) else {
+                guard let next = string[index...].indexAfter(prefix: symbol) else {
                     return .consume(through: string.index(before: index))
                 }
                 (index, isPartial) = next
@@ -33,17 +33,17 @@ internal enum EscapeAlgorithm: Sendable & Hashable {
             
             return options.isAtEnd ? .some(nil) : .buffer
             
-        case .prefix(let symbol, let whitelist):
+        case .prefix(let symbol, let replacements):
             precondition(!symbol.isEmpty)
-            guard var (index, isPartial) = string.indexOfPrefix(symbol) else { break }
+            guard var (index, isPartial) = string.indexAfter(prefix: symbol) else { break }
             guard !isPartial else { return options.isAtEnd ? .some(nil) : .buffer }
             
             guard index < string.endIndex else { return .buffer }
             
-            guard !whitelist.isEmpty else { return .consume(through: string.index(after: index)) }
+            guard !replacements.isEmpty else { return .consume(through: string.index(after: index)) }
             
-            for escape in whitelist {
-                guard let next = string[index...].indexOfPrefix(escape) else { continue }
+            for (escape,_) in replacements {
+                guard let next = string[index...].indexAfter(prefix: escape) else { continue }
                 (index, isPartial) = next
                 guard !isPartial else { if options.isAtEnd { continue } else { return .buffer } }
                 return .consume(through: index)
@@ -59,61 +59,28 @@ internal enum EscapeAlgorithm: Sendable & Hashable {
         switch self {
         case .surround(let symbol):
             guard !symbol.isEmpty else { return string }
-            // Double any occurrences of the symbol within, then wrap with the symbol
-            let doubled = symbol + symbol
-            let inner = String(string).replacingOccurrences(of: symbol, with: doubled)
-            let wrapped = symbol + inner + symbol
-            return wrapped[...]
+            return "\(symbol)\(string.replacingOccurrences(of: symbol, with: symbol + symbol))\(symbol)"[...]
 
-        case .prefix(let symbol, let whitelist):
+        case .prefix(let symbol, let replacements):
             guard !symbol.isEmpty else { return string }
-
-            if whitelist.isEmpty {
-                // Escape every character by prefixing the escape symbol
-                var result = String()
-                result.reserveCapacity(string.count * (symbol.count + 1))
-                for ch in string {
-                    result += symbol
-                    result.append(ch)
+            guard !replacements.isEmpty else { return string }
+            
+            var result = String()
+            result.reserveCapacity(string.count)
+            var rangeStart = string.startIndex
+            var rangeIndex = string.startIndex
+            while rangeIndex < string.endIndex {
+                for (replacement, escape) in replacements {
+                    guard let next = string[rangeIndex...].indexAfter(prefix: escape) else { continue }
+                    let (index, isPartial) = next
+                    guard !isPartial else { continue }
+                    result.append("\(string[rangeStart..<rangeIndex])\(symbol)\(replacement)")
+                    rangeStart = index
+                    rangeIndex = index
                 }
-                return result[...]
-            } else {
-                // Build a list of (content, fullEscaped) where fullEscaped starts with the escape symbol
-                var pairs: [(content: String, full: String)] = []
-                pairs.reserveCapacity(whitelist.count)
-                for full in whitelist {
-                    if full.hasPrefix(symbol) {
-                        let content = String(full.dropFirst(symbol.count))
-                        if !content.isEmpty {
-                            pairs.append((content, full))
-                        }
-                    }
-                }
-                // Prefer the longest content first to handle overlaps (e.g., CRLF vs CR)
-                pairs.sort { $0.content.count > $1.content.count }
-
-                var result = String()
-                result.reserveCapacity(string.count)
-                var i = string.startIndex
-                while i < string.endIndex {
-                    var matched: (content: String, full: String)? = nil
-                    for p in pairs {
-                        if string[i...].hasPrefix(p.content) {
-                            matched = p
-                            break
-                        }
-                    }
-
-                    if let m = matched {
-                        result += m.full
-                        i = string.index(i, offsetBy: m.content.count)
-                    } else {
-                        result.append(string[i])
-                        i = string.index(after: i)
-                    }
-                }
-                return result[...]
             }
+            result.append(String(string[rangeStart...]))
+            return result[...]
         }
     }
     
@@ -121,7 +88,7 @@ internal enum EscapeAlgorithm: Sendable & Hashable {
         switch self {
         case .surround(let symbol):
             guard !symbol.isEmpty else { return string }
-            // Only unescape doubled symbols if the value is actually surrounded
+
             guard string.hasPrefix(symbol), string.hasSuffix(symbol) else { return string }
             let start = string.index(string.startIndex, offsetBy: symbol.count)
             let end = string.index(string.endIndex, offsetBy: -symbol.count)
@@ -130,56 +97,36 @@ internal enum EscapeAlgorithm: Sendable & Hashable {
             let unescaped = inner.replacingOccurrences(of: doubled, with: symbol)
             return unescaped[...]
 
-        case .prefix(let symbol, let whitelist):
+        case .prefix(let symbol, let replacements):
             guard !symbol.isEmpty else { return string }
             var result = String()
             result.reserveCapacity(string.count)
 
-            var i = string.startIndex
+            var rangeIndex = string.startIndex
+        ou: while rangeIndex < string.endIndex {
+                guard
+                    let next = string[rangeIndex...].firstRange(of: symbol),
+                    !next.partial,
+                    next.0.lowerBound < string.endIndex
+                else { break }
+                
+                result.append(String(string[rangeIndex..<next.0.lowerBound]))
+                rangeIndex = next.0.upperBound
+            
+                guard rangeIndex < string.endIndex else { break }
 
-            if whitelist.isEmpty {
-                // Remove the escape symbol and keep the next character (if present)
-                while i < string.endIndex {
-                    if string[i...].hasPrefix(symbol) {
-                        if let afterSymbol = string.index(i, offsetBy: symbol.count, limitedBy: string.endIndex), afterSymbol < string.endIndex {
-                            result.append(string[afterSymbol])
-                            i = string.index(after: afterSymbol)
-                        } else {
-                            // Trailing escape symbol with nothing to escape – drop it
-                            i = string.endIndex
-                        }
-                    } else {
-                        result.append(string[i])
-                        i = string.index(after: i)
-                    }
+                for (escape, replacement) in replacements {
+                    guard let next = string[rangeIndex...].indexAfter(prefix: escape), !next.partial else { continue }
+                    result.append(replacement)
+                    (rangeIndex, _) = next
+                    continue ou
                 }
-                return result[...]
-            } else {
-                // Prefer longest match first to properly handle overlapping sequences (e.g., \r\n vs \r)
-                let sorted = whitelist.sorted { $0.count > $1.count }
-                while i < string.endIndex {
-                    var matched: String? = nil
-                    for candidate in sorted {
-                        if string[i...].hasPrefix(candidate) {
-                            matched = candidate
-                            break
-                        }
-                    }
 
-                    if let m = matched {
-                        // Append the matched content without the leading escape symbol
-                        let matchEnd = string.index(i, offsetBy: m.count, limitedBy: string.endIndex) ?? string.endIndex
-                        let contentStart = string.index(i, offsetBy: symbol.count, limitedBy: matchEnd) ?? matchEnd
-                        result += string[contentStart..<matchEnd]
-                        i = matchEnd
-                    } else {
-                        // No special escape – copy one character literally
-                        result.append(string[i])
-                        i = string.index(after: i)
-                    }
-                }
-                return result[...]
+                string.formIndex(after: &rangeIndex) // skip 1
             }
+            
+            result.append(String(string[rangeIndex...]))
+            return result[...]
         }
     }
 }

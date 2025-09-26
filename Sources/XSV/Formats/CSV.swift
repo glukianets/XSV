@@ -52,17 +52,3 @@ public struct CSVFileStrategy: SegmentStrategy {
     }
 }
 
-extension String { //RFC-4180
-    fileprivate func csvEscaped() -> String {
-        if self.contains(",") || self.contains("\"") || self.contains("\n") {
-            "\"\(self.replacingOccurrences(of: "\"", with: "\"\""))\""
-        } else {
-            self
-        }
-    }
-    
-    fileprivate func csvUnescaped() -> String {
-        guard self.hasPrefix("\"") && self.hasSuffix("\"") && self.count >= 2 else { return self }
-        return self.dropFirst().dropLast().replacingOccurrences(of: "\"\"", with: "\"")
-    }
-}
