@@ -4,7 +4,6 @@ import PackageDescription
 
 let package = Package(
     name: "XSV",
-    platforms: [.iOS(.v26), .macOS(.v26), .macCatalyst(.v26), .watchOS(.v26), .tvOS(.v26), .visionOS(.v26)],
     products: [
         .library(
             name: "XSV",
@@ -13,11 +12,14 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "XSV"
+            name: "XSV",
         ),
         .testTarget(
             name: "XSVTests",
-            dependencies: ["XSV"]
+            dependencies: ["XSV"],
+            resources: [
+                .process("Data")
+            ],
         ),
     ],
     swiftLanguageModes: [.v6],

@@ -1,54 +1,62 @@
-import Foundation
+import Swift
 
-public struct Segment<let Separator: Int, Element: _SegmentProtocol>: _SegmentProtocol {
-    fileprivate enum Value: Hashable {
+public struct Segment<Strategy: SegmentStrategy>: SegmentProtocol {
+    public typealias Strategy = Strategy
+    public typealias Element = Strategy.Value
+
+    fileprivate enum Storage: Hashable {
         case materialized(Element)
-        case thunk(data: Substring, RangeData)
+        case thunk(Memento<Element>)
     }
     
-    private static var separatorString: String {
-        String(Character(UnicodeScalar(Separator)!))
-    }
-
-    public var value: Substring {
-        get {
-            self.elements.map {
-                switch $0 {
-                case .materialized(let segment):
-                    segment.value
-                case .thunk(data: let substring, _):
-                    substring
-                }
-            }.joined(separator: Self.separatorString)[...]
-        }
-        set {
-            self = .init(newValue)
-        }
-    }
-
-    private var elements: [Value]
+    private var elements: [Storage]
     
-    fileprivate init(_ elements: some Sequence<Value>) {
-        precondition(ASCIISeparator(Separator) != nil, "Segment Separator has to belong to ASCII IS range")
+    fileprivate init(_ elements: some Sequence<Storage>) {
         self.elements = Array(elements)
     }
     
-    public init(memento: Memento) {
-        self.init(memento.value.isEmpty ? [] : memento.ranges.ranges.map { .thunk(data: memento.value[$0.range], $0.value) })
+    public init(memento: Memento<Self>) {
+        self.init(memento.ranges.ranges.map { .thunk(.init(value: $0.segment, ranges: $0.value)) })
     }
 }
 
-extension Segment {
-    public init(_ string: some StringProtocol) {
-        let string = String(string)[...]
-        let ranges = RangeData(in: string, separators: ASCIISeparator.allCases)
-        self.init(memento: .init(_value: string, _ranges: ranges))
+extension Segment: LosslessStringConvertible {
+    public var description: String {
+        var result = ""
+        self.write(to: &result)
+        return result
+    }
+
+    public init(_ description: String) {
+        self.init(memento: .init(description))
     }
 }
 
-extension Segment: RangeReplaceableCollection, RandomAccessCollection, MutableCollection {
+extension Segment: TextOutputStreamable {
+    public func write(to target: inout some TextOutputStream) {
+        var strategy = Strategy.writingStrategy()
+        strategy.withStream(&target) { withElement in
+            for element in elements {
+                withElement { stream in
+                    switch element {
+                    case .materialized(let segment):
+                        Strategy.dehydrate(segment, into: &stream)
+                    case .thunk(let memento):
+                        if memento.value.isEmpty && !memento.ranges.ranges.isEmpty {
+                            Strategy.dehydrate(Strategy.rehydrate(memento), into: &stream)
+                        } else {
+                            memento.value.write(to: &stream)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+extension Segment: RangeReplaceableCollection & RandomAccessCollection & MutableCollection
+where Self: SegmentProtocol {
     public typealias SubSequence = Slice<Self>
-    public typealias Element = Element
     public typealias Index = Int
 
     public var startIndex: Int { elements.startIndex }
@@ -61,12 +69,14 @@ extension Segment: RangeReplaceableCollection, RandomAccessCollection, MutableCo
         get {
             switch self.elements[position] {
             case .materialized(let element):
-                return element
-            case .thunk(data: let data, let ranges):
-                return Element(memento: Memento(_value: data, _ranges: ranges))
+                element
+            case .thunk(let memento):
+                Self.Strategy.rehydrate(memento)
             }
         }
-        set { self.elements[position] = .materialized(newValue) }
+        set {
+            self.elements[position] = .materialized(newValue)
+        }
     }
 
     public subscript(bounds: Range<Int>) -> Slice<Self> {
@@ -86,7 +96,7 @@ extension Segment: RangeReplaceableCollection, RandomAccessCollection, MutableCo
     }
 }
 
-extension Segment: ExpressibleByArrayLiteral {
+extension Segment: ExpressibleByArrayLiteral where Self: SegmentProtocol {
     public typealias ArrayLiteralElement = Element
     
     public init(arrayLiteral elements: Element...) {
@@ -102,7 +112,7 @@ extension Segment: ExpressibleByStringLiteral {
 
 extension Segment: Hashable & Equatable {
     public static func ==(lhs: Self, rhs: Self) -> Bool {
-        zip(lhs.elements, rhs.elements).allSatisfy(==)
+        lhs.elements.count == rhs.elements.count && zip(lhs.elements, rhs.elements).allSatisfy(==)
     }
     
     public func hash(into hasher: inout Hasher) {

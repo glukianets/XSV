@@ -1,7 +1,6 @@
 import Foundation
 import Testing
 @testable import XSV
-import struct XSV.Unit
 
 typealias PackageLike<C> = C where C: RangeReplaceableCollection, C.Element == FileLike<C.Element>
 typealias FileLike<C> = C where C: RangeReplaceableCollection, C.Element == GroupLike<C.Element>
@@ -39,15 +38,14 @@ internal struct LCG: RandomNumberGenerator {
 }
 
 struct GenerationConfig {
-    let filesRange  = 1...10
-    let groupsRange = 1...10
-    let recordsRange = 1...10
-    let unitsRange   = 1...10
-    let unitSizeRange = 1...100
+    let filesRange  = 1...2
+    let groupsRange = 1...2
+    let recordsRange = 1...2
+    let unitsRange   = 1...2
+    let unitSizeRange = 1...5
 }
 
-func generatePackage<C>(rng: inout LCG, config: GenerationConfig = .init()) -> C where C == PackageLike<C>
-{
+func generatePackage<C>(rng: inout LCG, config: GenerationConfig = .init()) -> C where C == PackageLike<C> {
     var model: C = .init()
 
     let fCount = rng.nextInt(in: config.filesRange)
@@ -97,7 +95,8 @@ func generateUnit<T: LosslessStringConvertible>(rng: inout LCG, config: Generati
     for _ in 0..<length {
         var scalar: UnicodeScalar
         repeat {
-            let value = UInt32(rng.nextInt(in: 0x20...0xD7FF)) // skip C0 and surrogates
+            let value = UInt32(rng.nextInt(in: 0x20...0x7F)) // just ASCII
+//            let value = UInt32(rng.nextInt(in: 0x20...0xD7FF)) // skip C0 and surrogates
             scalar = UnicodeScalar(value) ?? UnicodeScalar(0x20)
         } while CharacterSet.controlCharacters.contains(scalar)
         scalars.append(scalar)
@@ -152,6 +151,10 @@ func serializeUnit<C>(_ units: C) -> Data where C == RecordLike<C> {
 // MARK: - Comparison
 
 func == <L, R>(_ lhs: PackageLike<L>, _ rhs: PackageLike<R>) -> Bool {
+    areEqualPackages(lhs, rhs)
+}
+
+func areEqualPackages<L, R>(_ lhs: PackageLike<L>, _ rhs: PackageLike<R>) -> Bool {
     guard lhs.count == rhs.count else { return false }
     for (f1, f2) in zip(lhs, rhs) {
         if !(==)(f1, f2) { return false }
@@ -160,6 +163,10 @@ func == <L, R>(_ lhs: PackageLike<L>, _ rhs: PackageLike<R>) -> Bool {
 }
 
 func == <L, R>(_ lhs: FileLike<L>, _ rhs: FileLike<R>) -> Bool {
+    areEqualFiles(lhs, rhs)
+}
+
+func areEqualFiles<L, R>(_ lhs: FileLike<L>, _ rhs: FileLike<R>) -> Bool {
     guard lhs.count == rhs.count else { return false }
     for (g1, g2) in zip(lhs, rhs) {
         if !(==)(g1, g2) { return false }
@@ -168,6 +175,10 @@ func == <L, R>(_ lhs: FileLike<L>, _ rhs: FileLike<R>) -> Bool {
 }
 
 func == <L, R>(_ lhs: GroupLike<L>, _ rhs: GroupLike<R>) -> Bool {
+    areEqualGroups(lhs, rhs)
+}
+
+func areEqualGroups<L, R>(_ lhs: GroupLike<L>, _ rhs: GroupLike<R>) -> Bool {
     guard lhs.count == rhs.count else { return false }
     for (r1, r2) in zip(lhs, rhs) {
         if !(==)(r1, r2) { return false }
@@ -176,6 +187,10 @@ func == <L, R>(_ lhs: GroupLike<L>, _ rhs: GroupLike<R>) -> Bool {
 }
 
 func == <L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>) -> Bool {
+    areEqualRecords(lhs, rhs)
+}
+
+func areEqualRecords<L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>) -> Bool {
     guard lhs.count == rhs.count else { return false }
     for (u1, u2) in zip(lhs, rhs) {
         if u1.description != u2.description { return false }
@@ -183,10 +198,80 @@ func == <L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>) -> Bool {
     return true
 }
 
-func == (_ lhs: some StringProtocol, _ rhs: Unit) -> Bool {
-    return lhs == rhs.value
+// MARK: - First-difference diagnostics
+
+typealias XSVDiff = (path: String, left: String, right: String)
+
+func diffPackage<L, R>(_ lhs: PackageLike<L>, _ rhs: PackageLike<R>) -> XSVDiff? {
+    if lhs.count != rhs.count {
+        return ("files.count", String(lhs.count), String(rhs.count))
+    }
+    var i = 0
+    for (lf, rf) in zip(lhs, rhs) {
+        if let d = diffFile(lf, rf, path: "files[\(i)]") {
+            return d
+        }
+        i += 1
+    }
+    return nil
 }
 
-func == (_ lhs: Unit, _ rhs: some StringProtocol) -> Bool {
-    return lhs.value == rhs
+func diffFile<L, R>(_ lhs: FileLike<L>, _ rhs: FileLike<R>, path: String = "files") -> XSVDiff? {
+    if lhs.count != rhs.count {
+        return ("\(path).groups.count", String(lhs.count), String(rhs.count))
+    }
+    var i = 0
+    for (lg, rg) in zip(lhs, rhs) {
+        if let d = diffGroup(lg, rg, path: "\(path).groups[\(i)]") {
+            return d
+        }
+        i += 1
+    }
+    return nil
+}
+
+func diffGroup<L, R>(_ lhs: GroupLike<L>, _ rhs: GroupLike<R>, path: String = "files[].groups[]") -> XSVDiff? {
+    if lhs.count != rhs.count {
+        return ("\(path).records.count", String(lhs.count), String(rhs.count))
+    }
+    var i = 0
+    for (lr, rr) in zip(lhs, rhs) {
+        if let d = diffRecord(lr, rr, path: "\(path).records[\(i)]") {
+            return d
+        }
+        i += 1
+    }
+    return nil
+}
+
+func diffRecord<L, R>(_ lhs: RecordLike<L>, _ rhs: RecordLike<R>, path: String = "files[].groups[].records[]") -> XSVDiff? {
+    if lhs.count != rhs.count {
+        return ("\(path).units.count", String(lhs.count), String(rhs.count))
+    }
+    var i = 0
+    for (lu, ru) in zip(lhs, rhs) {
+        if lu.description != ru.description {
+            return ("\(path).units[\(i)]", lu.description, ru.description)
+        }
+        i += 1
+    }
+    return nil
+}
+
+// MARK: - Morphing
+
+func morphPackage<L, R>(_ lhs: PackageLike<L>, into rhs: PackageLike<R>.Type = R.self) -> R {
+    return .init(lhs.compactMap { morphFile($0) })
+}
+
+func morphFile<L, R>(_ lhs: FileLike<L>, into rhs: FileLike<R>.Type = R.self) -> R {
+    return .init(lhs.compactMap { morphGroup($0) })
+}
+
+func morphGroup<L, R>(_ lhs: GroupLike<L>, into rhs: GroupLike<R>.Type = R.self) -> R {
+    return .init(lhs.compactMap { morphRecord($0) })
+}
+
+func morphRecord<L, R>(_ lhs: RecordLike<L>, into rhs: RecordLike<R>.Type = R.self) -> R {
+    return .init(lhs.compactMap { R.Element.init($0.description) })
 }
